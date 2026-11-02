@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>বুকশপ B2B SaaS উইজেট ইন্টিগ্রেশন ডেমো | Store-Exclusive Demo</title>
+  <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Hind Siliguri', sans-serif;
+      background: #f8fafc;
+      color: #1e293b;
+      margin: 0;
+      padding: 40px 20px;
+      line-height: 1.6;
+    }
+    .card {
+      max-width: 800px;
+      margin: 0 auto;
+      background: white;
+      padding: 36px;
+      border-radius: 16px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+      border: 1px solid #e2e8f0;
+    }
+    h1 { color: #065f46; font-size: 26px; margin-bottom: 8px; }
+    p { font-size: 15px; margin-bottom: 16px; color: #475569; }
+    pre {
+      background: #0f172a;
+      color: #38bdf8;
+      padding: 16px;
+      border-radius: 10px;
+      overflow-x: auto;
+      font-size: 14px;
+      margin: 16px 0;
+    }
+    .badge {
+      display: inline-block;
+      background: #dcfce7;
+      color: #15803d;
+      padding: 4px 12px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 700;
+      margin-bottom: 16px;
+    }
+    .store-switcher {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 20px 0;
+    }
+    .store-btn {
+      padding: 8px 16px;
+      border-radius: 8px;
+      border: 1px solid #cbd5e1;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 13px;
+      color: #334155;
+      background: #f1f5f9;
+      transition: all 0.2s;
+    }
+    .store-btn:hover { background: #e2e8f0; }
+    .store-btn.active {
+      background: #059669;
+      color: white;
+      border-color: #059669;
+    }
+    .features {
+      list-style: none;
+      padding: 0;
+      margin: 20px 0;
+    }
+    .features li {
+      padding: 8px 0;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 15px;
+    }
+    .features li span { font-size: 18px; }
+  </style>
+</head>
+<body>
+
+  <div class="card">
+    <div class="badge">💼 বুকশপ B2B SaaS ডেমো (৳১,৫০০ - ৳২,৫০০/মাস)</div>
+    <h1>যেকোনো অনলাইন বুকশপের জন্য সিঙ্গেল-স্টোর এক্সক্লুসিভ সেলসম্যান</h1>
+    <p>
+      আপনি যখন কোনো নির্দিষ্ট বুকশপ কোম্পানির (যেমন: রূহামা শপ, আলাদা বই বা বাতিঘর) কাছে এই সার্ভিস বিক্রি করবেন, তখন বটটি শুধুমাত্র <strong>তাদের দোকানের বই, স্টক ও দাম</strong> দেখাবে। কোনো প্রতিদ্বন্দ্বী দোকানের নাম বা লিংক কখনোই আসবে না!
+    </p>
+
+    <!-- Interactive Switcher -->
+    <div style="background:#f8fafc; padding:16px; border-radius:12px; border:1px solid #e2e8f0;">
+      <strong style="font-size:14px; color:#0f172a;">নিচের বুকস্টোরগুলোতে ক্লিক করে লাইভ পরিবর্তন দেখুন:</strong>
+      <div class="store-switcher">
+        <a href="?merchant=ruhama" class="store-btn" id="btn-ruhama">🕌 রূহামা শপ</a>
+        <a href="?merchant=aladaboi" class="store-btn" id="btn-aladaboi">📖 আলাদা বই</a>
+        <a href="?merchant=guardian" class="store-btn" id="btn-guardian">🛡️ গার্ডিয়ান পাবলিকেশনস</a>
+        <a href="?merchant=oitijjhya" class="store-btn" id="btn-oitijjhya">🏛️ ঐতিহ্য প্রকাশনী</a>
+        <a href="?merchant=anyaprokash" class="store-btn" id="btn-anyaprokash">✨ অন্যপ্রকাশ</a>
+        <a href="?merchant=baatighar" class="store-btn" id="btn-baatighar">🏮 বাতিঘর</a>
+        <a href="?merchant=wafilife" class="store-btn" id="btn-wafilife">📚 ওয়াফিলাইফ</a>
+        <a href="?merchant=default" class="store-btn" id="btn-default">🤖 ২১-শপ ও প্রকাশনী কম্প্যারেটর</a>
+      </div>
+    </div>
+
+    <h3 style="margin-top:24px; font-size:16px;">উক্ত কোম্পানির সাইটে স্ক্রিপ্ট বসানোর নিয়ম:</h3>
+    <pre><code id="embed-code">&lt;script src="http://localhost:5000/widget.js" data-merchant="ruhama" async&gt;&lt;/script&gt;</code></pre>
+
+    <ul class="features">
+      <li><span>🔒</span> <strong>সম্পূর্ণ প্রতিদ্বন্দ্বী-মুক্ত:</strong> অন্য কোনো দোকানের নাম বা কম দাম আসবে না।</li>
+      <li><span>🎨</span> <strong>হোয়াইট-লেবেল ব্র্যান্ডিং:</strong> বুকস্টোরের নিজস্ব নাম, কালার ও লোগো।</li>
+      <li><span>📱</span> <strong>ফেসবুক মেসেঞ্জার বট (Pro Plan):</strong> ফেসবুক ইনবক্সে কাস্টমার নক দিলেও স্বয়ংক্রিয় সেলস হবে।</li>
+      <li><span>💰</span> <strong>সাবস্ক্রিপশন প্রাইসিং:</strong> Standard ৳১,৫০০/মাস | Pro (Web + Facebook) ৳২,৫০০/মাস।</li>
+    </ul>
+
+    <p style="margin-top: 24px; font-weight: 700; color: #059669;">
+      👉 স্ক্রিনের নিচে-ডান কোণায় লক্ষ্য করুন! উইজেটটি নির্বাচিত স্টোরের রূপে বদলে গেছে। ক্লিক করে এখনই চ্যাট করুন।
+    </p>
+  </div>
+
+  <script>
+    var params = new URLSearchParams(window.location.search);
+    var currentMerchant = params.get('merchant') || 'ruhama';
+    var activeBtn = document.getElementById('btn-' + currentMerchant);
+    if (activeBtn) activeBtn.classList.add('active');
+    document.getElementById('embed-code').textContent = '<script src="' + window.location.origin + '/widget.js" data-merchant="' + currentMerchant + '" async><\\/script>';
+  </script>
+
+  <!-- Dynamic Widget with selected merchant -->
+  <script src="/widget.js" async></script>
+</body>
+</html>
