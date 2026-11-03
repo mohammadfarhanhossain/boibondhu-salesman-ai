@@ -1,9 +1,8 @@
 """
-Builds master_store_catalog table in catalog_fts.sqlite3 from:
-1. C:\\Automation_project\\wafilife scrapper\\master.csv
-2. C:\\Automation_project\\rokomar_scrapper\\master.csv
+Builds master_store_catalog table in catalog_fts.sqlite3 from all 21 bookstores
+master catalogs in C:\\Automation_project\\<store>_scrapper\\master.csv.
 
-Allows instant 1-2ms retrieval of offline Rokomari & Wafilife catalog pricing
+Allows instant 1-2ms retrieval of offline catalog pricing across all 21 bookstores
 before or alongside live web scraping.
 """
 
@@ -12,13 +11,36 @@ import sys
 import csv
 import sqlite3
 import time
-import urllib.parse
+from pathlib import Path
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from salesman.catalog_fts import DB_PATH, normalize_bangla_phonetic
 
-WAFILIFE_CSV = r"C:\Automation_project\wafilife scrapper\master.csv"
-ROKOMARI_CSV = r"C:\Automation_project\rokomar_scrapper\master.csv"
+BASE_PROJECTS_DIR = Path(r"C:\Automation_project")
+
+ALL_STORES = [
+    {"name": "Rokomari", "folder": "rokomar_scrapper", "type": "General", "price_key": "rokomari_price"},
+    {"name": "Wafilife", "folder": "wafilife scrapper", "type": "Islamic", "price_key": "wafilife_price"},
+    {"name": "AladaBoi", "folder": "aladaboi_scrapper", "type": "Islamic", "price_key": "aladaboi_price"},
+    {"name": "Ruhama Shop", "folder": "ruhama_scrapper", "type": "Islamic", "price_key": "ruhama_price"},
+    {"name": "BDBooks", "folder": "bdbooks_scrapper", "type": "Islamic", "price_key": "bdbooks_price"},
+    {"name": "Kitabghor", "folder": "kitabghor_scrapper", "type": "Islamic", "price_key": "kitabghor_price"},
+    {"name": "Maktabatul Ashraf", "folder": "maktabatulashraf_scrapper", "type": "Islamic", "price_key": "maktabatulashraf_price"},
+    {"name": "BoiBitan", "folder": "boibitan_scrapper", "type": "Islamic", "price_key": "boibitan_price"},
+    {"name": "Guardian Publications", "folder": "guardianpubs_scrapper", "type": "Islamic", "price_key": "guardianpubs_price"},
+    {"name": "Baatighar", "folder": "baatighar_scrapper", "type": "General", "price_key": "baatighar_price"},
+    {"name": "Boibari", "folder": "boibari_scrapper", "type": "General", "price_key": "boibari_price"},
+    {"name": "eBoighar", "folder": "eboighar_scrapper", "type": "General", "price_key": "eboighar_price"},
+    {"name": "Adarsha", "folder": "adarsha_scrapper", "type": "General", "price_key": "adarsha_price"},
+    {"name": "BookTankBD", "folder": "booktankbd_scrapper", "type": "General", "price_key": "booktankbd_price"},
+    {"name": "BookOceanBD", "folder": "bookoceanbd_scrapper", "type": "General", "price_key": "bookocean_price"},
+    {"name": "Bengal Publications", "folder": "bengalpublications_scrapper", "type": "General", "price_key": "bengalpublications_price"},
+    {"name": "PBS", "folder": "pbs_scrapper", "type": "General", "price_key": "pbs_price"},
+    {"name": "Prothoma", "folder": "prothoma_scrapper", "type": "General", "price_key": "prothoma_price"},
+    {"name": "Oitijjhya", "folder": "oitijjhya_scrapper", "type": "General", "price_key": "oitijjhya_price"},
+    {"name": "AnyaProkash", "folder": "anyaprokash_scrapper", "type": "General", "price_key": "anyaprokash_price"},
+    {"name": "Anindya Prokash", "folder": "anindyaprokash_scrapper", "type": "General", "price_key": "anindyaprokash_price"}
+]
 
 
 def populate_master_stores(force: bool = False):
@@ -31,12 +53,12 @@ def populate_master_stores(force: bool = False):
     if exists and not force:
         cur.execute("SELECT count(*) FROM master_store_catalog")
         cnt = cur.fetchone()[0]
-        if cnt > 5000:
+        if cnt > 160000:
             print(f"[MasterStores] master_store_catalog already populated with {cnt:,} records.")
             conn.close()
             return
 
-    print("[MasterStores] Populating master_store_catalog from Rokomari and Wafilife master CSVs...")
+    print("[MasterStores] Populating master_store_catalog from all 21 bookstore master CSVs...")
     t0 = time.time()
 
     cur.execute("DROP TABLE IF EXISTS master_store_catalog")
@@ -59,10 +81,18 @@ def populate_master_stores(force: bool = False):
     cur.execute("CREATE INDEX IF NOT EXISTS idx_msc_store ON master_store_catalog(store)")
     cur.execute("CREATE INDEX IF NOT EXISTS idx_msc_book ON master_store_catalog(book_name)")
 
-    # 1. Ingest Wafilife
-    w_batch = []
-    if os.path.exists(WAFILIFE_CSV):
-        with open(WAFILIFE_CSV, mode="r", encoding="utf-8", errors="ignore") as f:
+    total_records = 0
+    for store_cfg in ALL_STORES:
+        s_name = store_cfg["name"]
+        folder = store_cfg["folder"]
+        p_key = store_cfg.get("price_key", "store_price")
+        csv_path = BASE_PROJECTS_DIR / folder / "master.csv"
+
+        if not csv_path.exists():
+            continue
+
+        batch = []
+        with open(csv_path, mode="r", encoding="utf-8", errors="ignore") as f:
             reader = csv.DictReader(f)
             for row in reader:
                 name = (row.get("book_name") or "").strip()
@@ -71,80 +101,41 @@ def populate_master_stores(force: bool = False):
                 auth = (row.get("author_name") or "").strip()
                 pub = (row.get("publisher_name") or "").strip()
                 subj = (row.get("subject_name") or "").strip()
+
+                # Price resolution
+                raw_price = row.get(p_key) or row.get("store_price") or row.get("price") or 0
                 try:
-                    price = int(float(row.get("wafilife_price") or 0))
+                    price = int(float(raw_price))
                 except Exception:
                     price = 0
+
+                raw_reg = row.get("main_price") or price
                 try:
-                    reg = int(float(row.get("main_price") or price))
+                    reg = int(float(raw_reg))
                 except Exception:
                     reg = price
-                url = f"https://www.wafilife.com/?s={urllib.parse.quote(name)}&post_type=product"
-                norm = normalize_bangla_phonetic(name)
-                w_batch.append(("Wafilife", name, auth, pub, subj, price, reg, url, norm))
-                if len(w_batch) >= 10000:
-                    cur.executemany("""
-                        INSERT INTO master_store_catalog (store, book_name, author_name, publisher_name, subject_name, price, regular_price, url, norm_name)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    """, w_batch)
-                    conn.commit()
-                    w_batch = []
 
-            if w_batch:
-                cur.executemany("""
-                    INSERT INTO master_store_catalog (store, book_name, author_name, publisher_name, subject_name, price, regular_price, url, norm_name)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """, w_batch)
-                conn.commit()
-
-    # 2. Ingest Rokomari
-    r_batch = []
-    if os.path.exists(ROKOMARI_CSV):
-        with open(ROKOMARI_CSV, mode="r", encoding="utf-8", errors="ignore") as f:
-            reader = csv.DictReader(f)
-            for row in reader:
-                name = (row.get("book_name") or "").strip()
-                if not name:
-                    continue
-                auth = (row.get("author_name") or "").strip()
-                pub = (row.get("publisher_name") or "").strip()
-                try:
-                    price = int(float(row.get("rokomari_price") or 0))
-                except Exception:
-                    price = 0
-                try:
-                    reg = int(float(row.get("main_price") or price))
-                except Exception:
-                    reg = price
                 url = (row.get("book_url") or "").strip()
-                if not url:
-                    url = f"https://www.rokomari.com/search?term={urllib.parse.quote(name)}"
                 norm = normalize_bangla_phonetic(name)
-                r_batch.append(("Rokomari", name, auth, pub, "সাধারণ বই", price, reg, url, norm))
-                if len(r_batch) >= 10000:
-                    cur.executemany("""
-                        INSERT INTO master_store_catalog (store, book_name, author_name, publisher_name, subject_name, price, regular_price, url, norm_name)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    """, r_batch)
-                    conn.commit()
-                    r_batch = []
 
-            if r_batch:
-                cur.executemany("""
-                    INSERT INTO master_store_catalog (store, book_name, author_name, publisher_name, subject_name, price, regular_price, url, norm_name)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """, r_batch)
-                conn.commit()
+                batch.append((s_name, name, auth, pub, subj, price, reg, url, norm))
 
-    cur.execute("SELECT count(*) FROM master_store_catalog")
-    total = cur.fetchone()[0]
+        if batch:
+            cur.executemany("""
+                INSERT INTO master_store_catalog (store, book_name, author_name, publisher_name, subject_name, price, regular_price, url, norm_name)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, batch)
+            conn.commit()
+            total_records += len(batch)
+            print(f"   Indexed {len(batch):,} books from {s_name}")
+
     conn.close()
-    print(f"[MasterStores] Successfully indexed {total:,} store records into master_store_catalog in {time.time() - t0:.2f}s")
+    print(f"[MasterStores] Successfully indexed {total_records:,} store records into master_store_catalog in {time.time() - t0:.2f}s")
 
 
-def get_offline_master_deals(query: str) -> list:
+def get_offline_master_deals(query: str, limit: int = 10) -> list:
     """
-    Instantly returns Rokomari and Wafilife pricing and metadata from master catalog.
+    Instantly returns all matched bookstore deals from master catalog.
     Runs in 1-2 milliseconds.
     """
     if not query:
@@ -160,7 +151,7 @@ def get_offline_master_deals(query: str) -> list:
         FROM master_store_catalog
         WHERE norm_name = ? OR norm_name LIKE ? OR book_name LIKE ?
         ORDER BY (price > 0) DESC, price ASC
-        LIMIT 6
+        LIMIT 25
     """, (norm_q, f"%{norm_q}%", f"%{query.strip()}%"))
 
     rows = cur.fetchall()
@@ -175,7 +166,7 @@ def get_offline_master_deals(query: str) -> list:
         seen_stores.add(st)
         deals.append({
             "store": st,
-            "store_type": "Islamic" if st == "Wafilife" else "General",
+            "store_type": "Islamic" if any(k in st.lower() for k in ["wafi", "ruhama", "ashraf", "kitab", "aladaboi", "bdbooks", "boibitan"]) else "General",
             "title": r["book_name"],
             "author": r["author_name"],
             "publisher": r["publisher_name"],
@@ -189,11 +180,15 @@ def get_offline_master_deals(query: str) -> list:
             "match_score": 100,
             "is_catalog_fast": True
         })
+        if len(deals) >= limit:
+            break
 
     return deals
 
 
 if __name__ == "__main__":
-    populate_master_stores()
+    populate_master_stores(force=True)
     res = get_offline_master_deals("শঙ্খনীল কারাগার")
-    print("Offline Master Deals for 'শঙ্খনীল কারাগার':", res)
+    print("\nOffline Master Deals for 'শঙ্খনীল কারাগার':")
+    for d in res:
+        print(f"  [{d['store']}] {d['title']} - ৳{d['price']} (Regular: ৳{d['regular_price']})")
