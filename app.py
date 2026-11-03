@@ -238,6 +238,10 @@ h1 { font-size: 32px; font-weight: 700; margin-bottom: 8px; }
 .deal-card.rank-3 { border-color: var(--bronze); background: linear-gradient(180deg, #fef3c7, #ffffff); }
 .deal-card.rank-4 { border-color: #3b82f6; background: linear-gradient(180deg, #eff6ff, #ffffff); }
 .deal-card.rank-5 { border-color: #8b5cf6; background: linear-gradient(180deg, #f5f3ff, #ffffff); }
+.deal-card.all-card { border-color: var(--border); background: #ffffff; }
+.deal-card.all-card.is-in-stock { border-top: 3px solid #10b981; }
+.deal-card.all-card.is-out-of-stock { border-top: 3px solid #ef4444; opacity: 0.92; }
+.all-card .rank-badge { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; }
 
 .rank-badge {
   position: absolute;
@@ -474,10 +478,66 @@ tr:hover td { background: #fdfefe; }
         </div>
       </section>
 
-      <!-- ALL STORES COMPARISON TABLE -->
+      <!-- ALL STORES FULL LIST: CARD GRID VIEW (MATCHING TOP 5) & TABLE VIEW TOGGLE -->
       <section class="table-section">
-        <h2 class="section-title">📊 সব বুকশপের পূর্ণাঙ্গ তালিকা ({{ total_found }}টি অপশন পাওয়া গেছে)</h2>
-        <div class="table-card">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:18px;">
+          <h2 class="section-title" style="margin-bottom:0;">📊 সব বুকশপের পূর্ণাঙ্গ তালিকা ({{ total_found }}টি অপশন পাওয়া গেছে)</h2>
+          <div style="display:flex; gap:6px; background:#e2e8f0; padding:3px; border-radius:8px;">
+            <button id="btnGridView" onclick="switchFullListView('grid')" style="padding:6px 14px; border:none; border-radius:6px; font-size:13px; font-weight:700; cursor:pointer; background:#ffffff; color:#1e1b4b; box-shadow:0 1px 3px rgba(0,0,0,0.1);">🎴 কার্ড ভিউ (Grid)</button>
+            <button id="btnTableView" onclick="switchFullListView('table')" style="padding:6px 14px; border:none; border-radius:6px; font-size:13px; font-weight:600; cursor:pointer; background:transparent; color:#64748b;">📋 টেবিল ভিউ (Table)</button>
+          </div>
+        </div>
+
+        <!-- 1. FULL LIST CARD GRID VIEW (IDENTICAL TO TOP 5 CARDS) -->
+        <div id="allCardsView" class="top-grid">
+          {% for item in all_results %}
+            <div class="deal-card all-card {{ 'is-in-stock' if item.in_stock else 'is-out-of-stock' }}">
+              <div class="rank-badge">#{{ loop.index }}</div>
+              <div class="deal-header">
+                <div>
+                  <span class="store-tag">{{ item.store }}</span>
+                  <span class="store-type">• {{ item.store_type }}</span>
+                </div>
+                <span class="stock-pill {{ 'in-stock' if item.in_stock else 'out-of-stock' }}">
+                  {{ item.stock_text }}
+                </span>
+              </div>
+
+              <!-- BOOK PROFILE: COVER IMG + WRITER + PUBLICATION + TOPIC -->
+              <div style="display:flex; gap:12px; margin-bottom:12px; align-items:flex-start;">
+                {% if item.image %}
+                  <img src="{{ item.image }}" alt="{{ item.title }}" style="width:64px; height:92px; object-fit:cover; border-radius:6px; box-shadow:0 3px 8px rgba(0,0,0,0.12); flex-shrink:0;" onerror="this.style.display='none'">
+                {% else %}
+                  <div style="width:64px; height:92px; background:#eff6ff; color:#1d4ed8; border-radius:6px; display:flex; align-items:center; justify-content:center; font-size:28px; flex-shrink:0;">📖</div>
+                {% endif %}
+                <div style="flex:1; min-width:0;">
+                  <div class="deal-title" title="{{ item.title }}">{{ item.title }}</div>
+                  {% if item.author %}<div class="deal-author" style="margin-bottom:3px;">👤 <strong>লেখক:</strong> {{ item.author }}</div>{% endif %}
+                  {% if item.publisher %}<div style="font-size:12px; color:var(--text-muted); margin-bottom:3px;">🏢 <strong>প্রকাশনী:</strong> {{ item.publisher }}</div>{% endif %}
+                  {% if item.subject %}<div style="font-size:11px; color:#2563eb; background:#eff6ff; display:inline-block; padding:1px 8px; border-radius:4px; margin-top:2px;">🏷️ {{ item.subject }}</div>{% endif %}
+                </div>
+              </div>
+
+              <div class="price-area">
+                <div>
+                  {% if item.regular_price and item.regular_price > item.price %}
+                    <div class="reg-price">৳{{ item.regular_price }}</div>
+                  {% endif %}
+                  <div class="current-price">৳{{ item.price if item.price else 'তথ্য নেই' }}</div>
+                </div>
+                <div style="display:flex; gap:6px;">
+                  {% if item.url %}
+                    <a href="{{ item.url }}" target="_blank" rel="noopener noreferrer" class="buy-btn">ওয়েবসাইটে যান ↗</a>
+                  {% endif %}
+                  <button type="button" class="buy-btn bb-order-trigger-btn" style="background:#059669; border:none; cursor:pointer;" data-book="{{ item.title | urlencode }}" data-price="{{ item.price or 0 }}" data-author="{{ item.author or item.store | urlencode }}">🛒 COD</button>
+                </div>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+
+        <!-- 2. FULL LIST SPREADSHEET TABLE VIEW (TOGGLEABLE) -->
+        <div id="allTableView" class="table-card" style="display:none; margin-top:16px;">
           <table>
             <thead>
               <tr>
@@ -528,6 +588,34 @@ tr:hover td { background: #fdfefe; }
             </tbody>
           </table>
         </div>
+
+        <script>
+        function switchFullListView(view) {
+          var cards = document.getElementById('allCardsView');
+          var table = document.getElementById('allTableView');
+          var btnGrid = document.getElementById('btnGridView');
+          var btnTable = document.getElementById('btnTableView');
+          if (view === 'grid') {
+            cards.style.display = 'grid';
+            table.style.display = 'none';
+            btnGrid.style.background = '#ffffff';
+            btnGrid.style.color = '#1e1b4b';
+            btnGrid.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1)';
+            btnTable.style.background = 'transparent';
+            btnTable.style.color = '#64748b';
+            btnTable.style.boxShadow = 'none';
+          } else {
+            cards.style.display = 'none';
+            table.style.display = 'block';
+            btnTable.style.background = '#ffffff';
+            btnTable.style.color = '#1e1b4b';
+            btnTable.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1)';
+            btnGrid.style.background = 'transparent';
+            btnGrid.style.color = '#64748b';
+            btnGrid.style.boxShadow = 'none';
+          }
+        }
+        </script>
       </section>
     {% else %}
       <div class="empty-state">
