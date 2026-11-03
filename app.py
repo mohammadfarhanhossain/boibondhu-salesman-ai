@@ -4,10 +4,12 @@ import json
 import sqlite3
 import time
 from flask import Flask, request, jsonify, render_template_string, Response
-from comparator_engine import compare_books, STORE_REGISTRY
+from comparator_engine import compare_books, stream_compare_books, STORE_REGISTRY
 from salesman.salesman_engine import salesman_agent
 from salesman.merchant_registry import get_merchant, list_merchants, register_custom_merchant
 from cover_resolver import resolve_book_cover, resolve_covers_for_books, set_cached_image
+from salesman.order_manager import create_order, get_orders, get_order_stats
+from salesman.analytics_tracker import track_search, track_chat_message, track_lost_sale, get_analytics_summary
 
 # Ensure UTF-8 output
 if hasattr(sys.stdout, 'reconfigure'):
@@ -1702,6 +1704,319 @@ function copyScriptCode() {
 </html>
 """
 
+# B2B ADMIN ANALYTICS & COD ORDERS DASHBOARD
+ADMIN_DASHBOARD_HTML = """<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>বইবন্ধু AI - B2B অ্যানালিটিক্স ও অর্ডার ড্যাশবোর্ড</title>
+<link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --primary: #4338ca;
+    --primary-light: #6366f1;
+    --success: #059669;
+    --danger: #dc2626;
+    --warning: #d97706;
+    --bg: #f8fafc;
+    --card: #ffffff;
+    --text: #0f172a;
+    --muted: #64748b;
+    --border: #e2e8f0;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Hind Siliguri', sans-serif; }
+  body { background: var(--bg); color: var(--text); padding: 24px; min-height: 100vh; }
+  .dash-container { max-width: 1200px; margin: 0 auto; }
+  .header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; margin-bottom: 24px; }
+  .header h1 { font-size: 24px; font-weight: 700; color: #1e1b4b; display: flex; align-items: center; gap: 8px; }
+  .controls { display: flex; gap: 12px; align-items: center; }
+  select, button { padding: 9px 14px; border-radius: 8px; border: 1px solid var(--border); font-size: 14px; outline: none; }
+  select { background: #fff; cursor: pointer; }
+  .btn-primary { background: var(--primary); color: #fff; border: none; cursor: pointer; font-weight: 600; }
+  .btn-primary:hover { background: #3730a3; }
+  .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; margin-bottom: 24px; }
+  .kpi-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+  .kpi-title { font-size: 13px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+  .kpi-value { font-size: 28px; font-weight: 700; color: #0f172a; margin-top: 6px; }
+  .kpi-sub { font-size: 12px; color: var(--muted); margin-top: 4px; }
+  .tabs { display: flex; gap: 8px; border-bottom: 2px solid var(--border); margin-bottom: 20px; }
+  .tab-btn { padding: 10px 18px; border: none; background: none; font-size: 15px; font-weight: 600; color: var(--muted); cursor: pointer; border-bottom: 3px solid transparent; margin-bottom: -2px; }
+  .tab-btn.active { color: var(--primary); border-bottom-color: var(--primary); }
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+  .table-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+  table { width: 100%; border-collapse: collapse; text-align: left; font-size: 14px; }
+  th { background: #f1f5f9; padding: 12px 16px; font-weight: 600; color: #475569; }
+  td { padding: 12px 16px; border-top: 1px solid var(--border); }
+  tr:hover { background: #f8fafc; }
+  .badge { display: inline-block; padding: 3px 8px; border-radius: 6px; font-size: 11.5px; font-weight: 600; }
+  .badge-success { background: #ecfdf5; color: var(--success); }
+  .badge-danger { background: #fef2f2; color: var(--danger); }
+  .badge-warning { background: #fffbeb; color: var(--warning); }
+  .stream-box { background: #0f172a; color: #f8fafc; border-radius: 12px; padding: 20px; font-family: monospace; font-size: 13px; max-height: 380px; overflow-y: auto; margin-top: 16px; }
+</style>
+</head>
+<body>
+<div class="dash-container">
+  <div class="header">
+    <div>
+      <h1>📊 বইবন্ধু AI - B2B SaaS বিজনেস ইন্টেলিজেন্স ড্যাশবোর্ড</h1>
+      <p style="color:var(--muted); font-size:13.5px; margin-top:3px;">রিয়েল-টাইম কাস্টমার ডিমান্ড, মিসড সেলস অ্যানালিটিক্স ও ক্যাশ-অন-ডেলিভারি ট্র্যাকিং</p>
+    </div>
+    <div class="controls">
+      <select id="merchantFilter" onchange="loadDashboard()">
+        <option value="all">সব মার্চেন্ট (All Stores)</option>
+        <option value="neutral">সাধারণ ভিজিটর (Neutral)</option>
+        <option value="ruhama">রূহামা শপ (Ruhama Shop)</option>
+        <option value="aladaboi">আলাদা বই (AladaBoi)</option>
+        <option value="baatighar">বাতিঘর (Baatighar)</option>
+        <option value="wafilife">ওয়াফিলাইফ (Wafilife)</option>
+      </select>
+      <button class="btn-primary" onclick="loadDashboard()">🔄 রিফ্রেশ</button>
+      <a href="/demo" target="_blank" style="text-decoration:none;"><button class="btn-primary" style="background:#059669;">🛍️ শপ ডেমো খুলুন</button></a>
+    </div>
+  </div>
+
+  <div class="kpi-grid">
+    <div class="kpi-card">
+      <div class="kpi-title">💬 মোট অনুসন্ধান ও চ্যাট</div>
+      <div class="kpi-value" id="kpiSearches">0</div>
+      <div class="kpi-sub" id="kpiChats">কনভারসেশন: 0 টি</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-title">🛒 মোট ক্যাশ অন ডেলিভারি অর্ডার</div>
+      <div class="kpi-value" id="kpiOrders" style="color:var(--primary);">0</div>
+      <div class="kpi-sub" id="kpiPending">পেন্ডিং অর্ডার: 0 টি</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-title">💰 মোট বিক্রয় আয় (GMV)</div>
+      <div class="kpi-value" id="kpiRevenue" style="color:var(--success);">৳০</div>
+      <div class="kpi-sub">সরাসরি চ্যাট উইজেট থেকে কনভার্শন</div>
+    </div>
+    <div class="kpi-card" style="border-left:4px solid var(--danger);">
+      <div class="kpi-title" style="color:var(--danger);">🚨 হারানো বিক্রির সুযোগ (Lost Sales)</div>
+      <div class="kpi-value" id="kpiLost" style="color:var(--danger);">0</div>
+      <div class="kpi-sub">কাস্টমার চেয়েছে কিন্তু স্টকে ছিল না</div>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('tabLost')">🚨 হারানো বিক্রির সুযোগ (Lost Sales)</button>
+    <button class="tab-btn" onclick="switchTab('tabOrders')">🛒 ক্যাশ অন ডেলিভারি অর্ডার (COD Orders)</button>
+    <button class="tab-btn" onclick="switchTab('tabDemanded')">📈 সর্বাধিক জনপ্রিয় বই</button>
+    <button class="tab-btn" onclick="switchTab('tabStreaming')">⚡ ২১টি শপের লাইভ স্ট্রিমিং টেস্ট (SSE)</button>
+  </div>
+
+  <!-- Tab 1: Lost Sales Opportunities -->
+  <div id="tabLost" class="tab-content active">
+    <div class="table-card">
+      <div style="padding:16px; border-bottom:1px solid var(--border); background:#fff5f5;">
+        <h3 style="color:#991b1b; font-size:16px;">🚨 শপ মালিকের জন্য জরুরি অ্যালার্ট: হারানো বিক্রির সুযোগ</h3>
+        <p style="font-size:13px; color:#7f1d1d; margin-top:2px;">যেসব বই কাস্টমাররা ইনবক্সে চেয়েছে কিন্তু আপনার স্টোরে ছিল না। দ্রুত এই বইগুলো সংগ্রহ করলে এই সেলসগুলো পাওয়া যাবে!</p>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>বই বা লেখকের নাম</th>
+            <th>কাস্টমার রিকোয়েস্ট সংখ্যা</th>
+            <th>কারণ (Status)</th>
+            <th>অ্যাকশন</th>
+          </tr>
+        </thead>
+        <tbody id="lostSalesBody">
+          <tr><td colspan="4" style="text-align:center; color:var(--muted);">লোড হচ্ছে...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Tab 2: COD Orders -->
+  <div id="tabOrders" class="tab-content">
+    <div class="table-card">
+      <table>
+        <thead>
+          <tr>
+            <th>অর্ডার আইডি</th>
+            <th>তারিখ ও সময়</th>
+            <th>বইয়ের নাম</th>
+            <th>গ্রাহকের নাম ও ফোন</th>
+            <th>ঠিকানা ও জেলা</th>
+            <th>মোট টাকা</th>
+            <th>স্ট্যাটাস</th>
+          </tr>
+        </thead>
+        <tbody id="ordersBody">
+          <tr><td colspan="7" style="text-align:center; color:var(--muted);">কোনো অর্ডার পাওয়া যায়নি</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Tab 3: Demanded Books -->
+  <div id="tabDemanded" class="tab-content">
+    <div class="table-card">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>অনুসন্ধান করা বই / বিষয়</th>
+            <th>চাহিদা (সার্চ সংখ্যা)</th>
+            <th>ক্যাটাগরি</th>
+          </tr>
+        </thead>
+        <tbody id="demandedBody">
+          <tr><td colspan="4" style="text-align:center; color:var(--muted);">লোড হচ্ছে...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Tab 4: SSE Progressive Streaming Console -->
+  <div id="tabStreaming" class="tab-content">
+    <div class="table-card" style="padding:20px;">
+      <h3 style="margin-bottom:12px;">⚡ ২১টি বুকশপে প্রগ্রেসিভ লাইভ স্ক্র্যাপিং টেস্ট (Server-Sent Events)</h3>
+      <div style="display:flex; gap:10px; margin-bottom:16px;">
+        <input type="text" id="streamInput" placeholder="বইয়ের নাম লিখুন (যেমন: প্যারাডক্সিক্যাল সাজিদ)" style="flex:1; padding:10px 14px; border:1px solid var(--border); border-radius:8px;" value="প্যারাডক্সিক্যাল সাজিদ">
+        <button class="btn-primary" onclick="startStreamTest()">রিয়েল-টাইম স্ক্র্যাপিং শুরু করুন 🚀</button>
+      </div>
+      <div id="streamProgress" style="font-size:13.5px; font-weight:600; color:var(--primary); margin-bottom:8px;"></div>
+      <div class="stream-box" id="streamLog">// লাইভ স্ক্র্যাপিং রেজাল্ট এখানে ক্রমান্বয়ে স্ট্রিম হবে...</div>
+    </div>
+  </div>
+</div>
+
+<script>
+function switchTab(tabId) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  event.target.classList.add('active');
+  document.getElementById(tabId).classList.add('active');
+}
+
+async function loadDashboard() {
+  const merchant = document.getElementById('merchantFilter').value;
+  try {
+    const res = await fetch('/api/analytics/summary?merchant_id=' + merchant);
+    const data = await res.json();
+    
+    // KPI Updates
+    document.getElementById('kpiSearches').textContent = data.total_searches || 0;
+    document.getElementById('kpiChats').textContent = 'কনভারসেশন: ' + (data.total_chats || 0) + ' টি';
+    document.getElementById('kpiOrders').textContent = (data.order_stats && data.order_stats.total_orders) || 0;
+    document.getElementById('kpiPending').textContent = 'পেন্ডিং অর্ডার: ' + ((data.order_stats && data.order_stats.pending_orders) || 0) + ' টি';
+    document.getElementById('kpiRevenue').textContent = '৳' + ((data.order_stats && data.order_stats.total_revenue) || 0).toLocaleString();
+    document.getElementById('kpiLost').textContent = (data.lost_sales && data.lost_sales.length) || 0;
+
+    // Lost Sales Table
+    const lostTbody = document.getElementById('lostSalesBody');
+    if (data.lost_sales && data.lost_sales.length > 0) {
+      lostTbody.innerHTML = data.lost_sales.map(ls => `
+        <tr>
+          <td><strong>${ls.book}</strong></td>
+          <td><span class="badge badge-danger">${ls.count} বার খোঁজা হয়েছে</span></td>
+          <td>${ls.reason === 'out_of_stock' ? '<span class="badge badge-warning">স্টক শেষ</span>' : '<span class="badge badge-danger">ক্যাটালগে নেই</span>'}</td>
+          <td><button class="btn-primary" style="padding:4px 8px; font-size:11px;" onclick="alert('বইটি সংগ্রহের জন্য সাপ্লায়ারকে নোট পাঠানো হয়েছে!')">পণ্য সংগ্রহ করুন 📦</button></td>
+        </tr>
+      `).join('');
+    } else {
+      lostTbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:var(--muted); padding:20px;">🎉 দারুণ! কোনো মিসড সেলস পাওয়া যায়নি।</td></tr>';
+    }
+
+    // Demanded Books Table
+    const demTbody = document.getElementById('demandedBody');
+    if (data.top_searches && data.top_searches.length > 0) {
+      demTbody.innerHTML = data.top_searches.map((s, idx) => `
+        <tr>
+          <td>#${idx + 1}</td>
+          <td><strong>${s.query}</strong></td>
+          <td><span class="badge badge-success">${s.count} বার</span></td>
+          <td>বই / লেখক অনুসন্ধান</td>
+        </tr>
+      `).join('');
+    } else {
+      demTbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:var(--muted); padding:20px;">কোনো ডেটা নেই</td></tr>';
+    }
+
+    // Orders Table
+    loadOrders(merchant);
+
+  } catch (e) {
+    console.error('Dashboard load error:', e);
+  }
+}
+
+async function loadOrders(merchant) {
+  try {
+    const res = await fetch('/api/salesman/orders?merchant_id=' + merchant);
+    const data = await res.json();
+    const tbody = document.getElementById('ordersBody');
+    if (data.orders && data.orders.length > 0) {
+      tbody.innerHTML = data.orders.map(o => `
+        <tr>
+          <td><strong style="color:var(--primary);">${o.order_id}</strong></td>
+          <td style="font-size:12px; color:var(--muted);">${o.created_at}</td>
+          <td><strong>${o.book_title}</strong></td>
+          <td><div>${o.customer_name}</div><div style="font-size:12px; color:var(--muted);">${o.customer_phone}</div></td>
+          <td style="font-size:12.5px;">${o.customer_address}, ${o.district || ''}</td>
+          <td><strong style="color:var(--success);">৳${o.total_amount}</strong></td>
+          <td><span class="badge badge-warning">${o.status}</span></td>
+        </tr>
+      `).join('');
+    } else {
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:var(--muted); padding:20px;">এখনো কোনো ক্যাশ-অন-ডেলিভারি অর্ডার হয়নি। চ্যাট উইজেট থেকে অর্ডার ট্রাই করুন!</td></tr>';
+    }
+  } catch(e) {
+    console.error('Order fetch error:', e);
+  }
+}
+
+// Real-Time SSE Stream Tester
+function startStreamTest() {
+  const query = document.getElementById('streamInput').value.trim();
+  if (!query) return;
+
+  const logBox = document.getElementById('streamLog');
+  const prog = document.getElementById('streamProgress');
+  logBox.innerHTML = `[${new Date().toLocaleTimeString()}] স্ক্র্যাপিং কানেকশন শুরু হচ্ছে...\\n`;
+  prog.textContent = '২১টি অনলাইন শপে অনুসন্ধান শুরু হয়েছে...';
+
+  const evtSource = new EventSource('/api/compare/stream?query=' + encodeURIComponent(query));
+  
+  evtSource.addEventListener('store_result', function(e) {
+    const data = JSON.parse(e.data);
+    const statusText = data.has_match ? `✅ পাওয়া গেছে (${data.items.length} টি বই)` : `○ কোনো রেজাল্ট নেই`;
+    logBox.innerHTML += `[${data.completed}/${data.total}] [${data.store}] -> ${statusText}\\n`;
+    prog.textContent = `অগ্রগতি: ${data.completed}/${data.total}টি শপ স্ক্র্যাপ সম্পন্ন...`;
+    logBox.scrollTop = logBox.scrollHeight;
+  });
+
+  evtSource.addEventListener('complete', function(e) {
+    const data = JSON.parse(e.data);
+    logBox.innerHTML += `\\n🎉 স্ক্র্যাপিং সফলভাবে সম্পন্ন!\\nমোট শপ যাচাই: ${data.stores_searched}টি, মোট বই পাওয়া গেছে: ${data.total_found}টি।\\n`;
+    if (data.top_5 && data.top_5.length > 0) {
+      logBox.innerHTML += `\\n--- 🥇 শীর্ষ সর্বনিম্ন দামের তালিকা ---\\n`;
+      data.top_5.forEach(d => {
+        logBox.innerHTML += `* ${d.badge} [${d.store}] -> ৳${d.price} (${d.stock_text})\\n`;
+      });
+    }
+    prog.textContent = `✅ সম্পন্ন! মোট ${data.total_found}টি বই পাওয়া গেছে।`;
+    evtSource.close();
+  });
+
+  evtSource.onerror = function() {
+    logBox.innerHTML += `\\n[কানেকশন বন্ধ হয়েছে]\\n`;
+    evtSource.close();
+  };
+}
+
+// Initial load
+window.addEventListener('DOMContentLoaded', loadDashboard);
+</script>
+</body>
+</html>
+"""
+
 
 @app.route("/merchant")
 def merchant_portal():
@@ -1742,6 +2057,103 @@ def facebook_webhook():
     return "EVENT_RECEIVED", 200
 
 
+@app.route("/api/compare/stream", methods=["GET"])
+def api_compare_stream():
+    """
+    Server-Sent Events (SSE) progressive streaming endpoint.
+    Emits store_result events as each shop scraper finishes (Rokomari/Wafilife in 1-2s).
+    """
+    query = request.args.get("query", "").strip()
+    category = request.args.get("category", "all")
+    target_store = request.args.get("store") or request.args.get("merchant")
+
+    if not query:
+        return jsonify({"error": "Query parameter is required"}), 400
+
+    def event_stream():
+        for event in stream_compare_books(query, category=category, target_store=target_store):
+            yield f"event: {event['event']}\ndata: {json.dumps(event['data'], ensure_ascii=False)}\n\n"
+
+    return Response(
+        event_stream(),
+        mimetype="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+            "Access-Control-Allow-Origin": "*"
+        }
+    )
+
+
+@app.route("/api/salesman/order", methods=["POST", "OPTIONS"])
+def api_salesman_order():
+    """
+    In-Chat Cash-on-Delivery (COD) Order placement API.
+    Creates and records order to orders.sqlite3 with instant ID and delivery ETA.
+    """
+    if request.method == "OPTIONS":
+        return "", 204
+
+    data = request.get_json(silent=True) or {}
+    book_title = data.get("book_title", "").strip()
+    customer_name = data.get("customer_name", "").strip()
+    customer_phone = data.get("customer_phone", "").strip()
+    customer_address = data.get("customer_address", "").strip()
+    merchant_id = data.get("merchant_id") or "neutral"
+    book_author = data.get("book_author", "")
+    price = data.get("price", 0)
+    quantity = data.get("quantity", 1)
+    district = data.get("district", "ঢাকা")
+    notes = data.get("notes", "")
+
+    res = create_order(
+        book_title=book_title,
+        customer_name=customer_name,
+        customer_phone=customer_phone,
+        customer_address=customer_address,
+        merchant_id=merchant_id,
+        book_author=book_author,
+        price=price,
+        quantity=quantity,
+        district=district,
+        notes=notes
+    )
+
+    if res.get("status") == "success":
+        # Track confirmed sale in analytics
+        track_search(f"ORDER: {book_title}", merchant_id=merchant_id, category="Order Placed", books_found=1)
+        return jsonify(res), 200
+    else:
+        return jsonify(res), 400
+
+
+@app.route("/api/salesman/orders", methods=["GET"])
+def api_salesman_orders():
+    """Returns order history and statistics for merchant dashboard."""
+    merchant_id = request.args.get("merchant_id")
+    limit = int(request.args.get("limit", 50))
+    orders = get_orders(merchant_id=merchant_id, limit=limit)
+    stats = get_order_stats(merchant_id=merchant_id)
+    return jsonify({"orders": orders, "stats": stats})
+
+
+@app.route("/api/analytics/summary", methods=["GET"])
+def api_analytics_summary():
+    """Returns aggregate BI metrics, lost sales, and top search queries."""
+    merchant_id = request.args.get("merchant_id")
+    summary = get_analytics_summary(merchant_id=merchant_id)
+    order_stats = get_order_stats(merchant_id=merchant_id)
+    summary["order_stats"] = order_stats
+    return jsonify(summary)
+
+
+@app.route("/admin/analytics")
+def admin_analytics_page():
+    """Interactive B2B SaaS Merchant Analytics & COD Order Dashboard."""
+    return render_template_string(ADMIN_DASHBOARD_HTML)
+
+
 @app.route("/api/salesman/chat", methods=["POST", "OPTIONS"])
 def api_salesman_chat():
     if request.method == "OPTIONS":
@@ -1751,12 +2163,20 @@ def api_salesman_chat():
     message = data.get("message", "").strip()
     session_id = data.get("session_id")
     api_key = data.get("api_key")
-    merchant_id = data.get("merchant_id") or request.args.get("merchant_id")
+    merchant_id = data.get("merchant_id") or request.args.get("merchant_id") or "neutral"
 
     if not message:
         return jsonify({"error": "Message is required"}), 400
 
+    # Track message in analytics
+    track_chat_message(message, merchant_id=merchant_id, session_id=session_id or "")
+
     result = salesman_agent.chat(message, session_id=session_id, api_key=api_key, merchant_id=merchant_id)
+
+    # Track search analytics
+    books_count = len(result.get("books", []))
+    track_search(message, merchant_id=merchant_id, category=result.get("category", ""), books_found=books_count)
+
     return jsonify(result)
 
 

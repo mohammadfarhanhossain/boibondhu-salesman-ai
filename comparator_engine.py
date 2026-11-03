@@ -1269,3 +1269,135 @@ def compare_books(query, category="all", target_store=None, min_similarity=0.60)
         "stores_searched": len(scrapers),
         "errors": errors
     }
+
+
+def stream_compare_books(query, category="all", target_store=None, min_similarity=0.60):
+    """
+    Progressive real-time generator: yields results via Server-Sent Events (SSE)
+    as each individual bookstore scraper finishes.
+    Rokomari and Wafilife arrive in 1-2s, with other stores streaming in successively.
+    """
+    query = query.strip()
+    if not query:
+        yield {"event": "complete", "data": {"query": "", "top_5": [], "all_results": [], "total_found": 0, "stores_searched": 0}}
+        return
+
+    scrapers = STORE_REGISTRY
+    if target_store:
+        target_norm = target_store.lower().replace(" ", "")
+        scrapers = [s for s in STORE_REGISTRY if target_norm in s[0].lower().replace(" ", "")]
+        min_similarity = min(min_similarity, 0.40)
+    elif category == "islamic":
+        scrapers = [s for s in STORE_REGISTRY if s[1] == "Islamic"]
+    elif category == "general":
+        scrapers = [s for s in STORE_REGISTRY if s[1] == "General"]
+
+    total_stores = len(scrapers)
+    all_matched = []
+    completed_count = 0
+    best_cover_image = ""
+    best_author = ""
+
+    with ThreadPoolExecutor(max_workers=min(total_stores, 24)) as pool:
+        future_map = {pool.submit(fn, query): (name, stype) for name, stype, fn in scrapers}
+        for future in as_completed(future_map):
+            name, stype = future_map[future]
+            completed_count += 1
+            store_items = []
+            try:
+                raw = future.result()
+                for it in raw:
+                    score = title_similarity(query, it['title'])
+                    if score >= min_similarity:
+                        it['match_score'] = round(score * 100)
+                        store_items.append(it)
+                        all_matched.append(it)
+
+                        # Update best cover and author
+                        img_val = it.get('image') or ""
+                        if not best_cover_image and img_val and ('http://' in img_val or 'https://' in img_val):
+                            best_cover_image = img_val
+                        auth_val = it.get('author') or ""
+                        if not best_author and auth_val and len(auth_val.strip()) > 1 and auth_val.strip() not in ['-', 'N/A']:
+                            best_author = auth_val.strip()
+            except Exception as e:
+                pass
+
+            # Enrich this store's items if image or author became available
+            for it in store_items:
+                if not it.get('image') and best_cover_image:
+                    it['image'] = best_cover_image
+                if not it.get('author') and best_author:
+                    it['author'] = best_author
+
+            yield {
+                "event": "store_result",
+                "data": {
+                    "store": name,
+                    "type": stype,
+                    "items": store_items,
+                    "has_match": len(store_items) > 0,
+                    "completed": completed_count,
+                    "total": total_stores,
+                    "is_fast_tier": name in ["Rokomari", "Wafilife"]
+                }
+            }
+
+    # Final ranking calculation
+    all_matched.sort(
+        key=lambda x: (
+            not x['in_stock'],
+            x['price'] if x['price'] is not None else 999999,
+            -x['match_score']
+        )
+    )
+
+    store_best = {}
+    for item in all_matched:
+        st = item['store']
+        if st not in store_best:
+            store_best[st] = item
+        else:
+            if not store_best[st]['in_stock'] and item['in_stock']:
+                store_best[st] = item
+            elif store_best[st]['in_stock'] == item['in_stock']:
+                if item['price'] and (not store_best[st]['price'] or item['price'] < store_best[st]['price']):
+                    store_best[st] = item
+
+    unique_store_items = list(store_best.values())
+    unique_store_items.sort(
+        key=lambda x: (
+            not x['in_stock'],
+            x['price'] if x['price'] is not None else 999999,
+            -x['match_score']
+        )
+    )
+
+    badges = ["🥇 সেরা অফার (১ম সর্বনিম্ন)", "🥈 ২য় সর্বনিম্ন", "🥉 ৩য় সর্বনিম্ন", "🎖️ ৪র্থ সর্বনিম্ন", "⭐ ৫ম সর্বনিম্ন"]
+    top_5 = []
+    in_stock_candidates = [it for it in unique_store_items if it['in_stock'] and it['price']]
+    for i, it in enumerate(in_stock_candidates[:5]):
+        it_copy = dict(it)
+        it_copy['rank'] = i + 1
+        it_copy['badge'] = badges[i]
+        top_5.append(it_copy)
+
+    if len(top_5) < 5:
+        out_of_stock = [it for it in unique_store_items if not it['in_stock'] and it['price']]
+        for it in out_of_stock[: 5 - len(top_5)]:
+            it_copy = dict(it)
+            it_copy['rank'] = len(top_5) + 1
+            it_copy['badge'] = f"{badges[len(top_5)]} (স্টক শেষ)"
+            top_5.append(it_copy)
+
+    yield {
+        "event": "complete",
+        "data": {
+            "query": query,
+            "top_5": top_5,
+            "all_results": all_matched,
+            "total_found": len(all_matched),
+            "stores_searched": total_stores
+        }
+    }
+

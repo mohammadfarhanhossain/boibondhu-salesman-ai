@@ -20,9 +20,12 @@ __pycache__/
 test_*.py
 scratch/
 
-# SQLite journals & caches
+# SQLite journals, caches, and runtime databases
 *.sqlite3-journal
 book_cache.sqlite3
+analytics.sqlite3
+orders.sqlite3
+catalog_fts.sqlite3
 
 # IDE & OS
 .vscode/

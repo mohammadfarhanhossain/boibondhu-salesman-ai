@@ -606,6 +606,60 @@
           </button>
         </div>
       </div>
+
+      <!-- In-Chat Cash on Delivery (COD) Order Modal -->
+      <div id="bb-order-modal" style="display:none; position:absolute; inset:0; background:rgba(15,23,42,0.65); backdrop-filter:blur(3px); z-index:9999; border-radius:16px; padding:16px; flex-direction:column; justify-content:center; align-items:center;">
+        <div style="background:#ffffff; width:100%; border-radius:12px; padding:16px; box-shadow:0 12px 30px rgba(0,0,0,0.25); position:relative; box-sizing:border-box;">
+          <button type="button" id="bb-order-close-btn" style="position:absolute; top:10px; right:12px; border:none; background:none; font-size:18px; cursor:pointer; color:#64748b;">✕</button>
+          
+          <div style="display:flex; align-items:center; gap:8px; margin-bottom:12px;">
+            <span style="font-size:22px;">🛒</span>
+            <div>
+              <h4 style="font-size:15px; font-weight:700; color:#1e1b4b; margin:0;">ক্যাশ অন ডেলিভারি অর্ডার</h4>
+              <p style="font-size:11.5px; color:#64748b; margin:0;">বই হাতে পেয়ে মূল্য পরিশোধ করুন</p>
+            </div>
+          </div>
+
+          <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:8px 10px; margin-bottom:12px; font-size:12px;">
+            <div id="bb-ord-disp-title" style="font-weight:700; color:#0f172a; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">বইয়ের নাম</div>
+            <div style="display:flex; justify-content:space-between; margin-top:4px; color:#475569;">
+              <span>মূল্য: <strong id="bb-ord-disp-price">৳০</strong></span>
+              <span>ডেলিভারি: <strong>৳৬০</strong></span>
+            </div>
+            <div style="margin-top:4px; font-weight:700; color:#059669; border-top:1px dashed #cbd5e1; padding-top:4px; display:flex; justify-content:space-between;">
+              <span>সর্বমোট প্রদেয়:</span>
+              <span id="bb-ord-disp-total">৳০</span>
+            </div>
+          </div>
+
+          <form id="bb-order-form">
+            <input type="hidden" id="bb-ord-book-title">
+            <input type="hidden" id="bb-ord-book-price">
+            <input type="hidden" id="bb-ord-book-author">
+
+            <div style="margin-bottom:8px;">
+              <label style="display:block; font-size:11.5px; font-weight:600; color:#475569; margin-bottom:3px;">আপনার নাম *</label>
+              <input type="text" id="bb-ord-name" required placeholder="পুরো নাম লিখুন" style="width:100%; padding:7px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:12.5px; box-sizing:border-box;">
+            </div>
+
+            <div style="margin-bottom:8px;">
+              <label style="display:block; font-size:11.5px; font-weight:600; color:#475569; margin-bottom:3px;">মোবাইল নম্বর (১১ ডিজিট) *</label>
+              <input type="tel" id="bb-ord-phone" required placeholder="017xxxxxxxx" pattern="^(\\+?88)?01[3-9]\\d{8}$" style="width:100%; padding:7px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:12.5px; box-sizing:border-box;">
+            </div>
+
+            <div style="margin-bottom:12px;">
+              <label style="display:block; font-size:11.5px; font-weight:600; color:#475569; margin-bottom:3px;">ডেলিভারি ঠিকানা ও জেলা *</label>
+              <textarea id="bb-ord-addr" required rows="2" placeholder="বাসা/রোড নম্বর, থানা ও জেলা" style="width:100%; padding:7px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:12.5px; resize:none; box-sizing:border-box;"></textarea>
+            </div>
+
+            <div id="bb-ord-error-box" style="color:#dc2626; font-size:11.5px; margin-bottom:8px; display:none;"></div>
+
+            <button type="submit" id="bb-ord-submit-btn" style="width:100%; background:#4338ca; color:#ffffff; border:none; padding:9px; border-radius:8px; font-weight:700; font-size:13.5px; cursor:pointer; display:flex; justify-content:center; align-items:center; gap:6px;">
+              <span>অর্ডার কনফার্ম করুন (COD) 🚀</span>
+            </button>
+          </form>
+        </div>
+      </div>
     </div>
   `;
   document.body.appendChild(root);
@@ -738,7 +792,10 @@
             </div>
             <span class="bb-deal-stock">${deal.stock_text || (deal.in_stock ? '● স্টকে আছে' : '○ স্টক সীমিত')}</span>
           </div>
-          ${deal.url ? `<a href="${deal.url}" target="_blank" rel="noopener noreferrer" class="bb-deal-btn">অর্ডার লিংক ↗</a>` : ''}
+          <div style="display:flex; gap:6px; align-items:center;">
+            ${deal.url ? `<a href="${deal.url}" target="_blank" rel="noopener noreferrer" class="bb-deal-btn">লিংক ↗</a>` : ''}
+            <button class="bb-deal-btn bb-order-trigger-btn" style="background:#059669; border-color:#059669; cursor:pointer;" data-book="${encodeURIComponent(topDeal ? (topDeal.title || deal.title || '') : (deal.title || ''))}" data-price="${deal.price || 0}" data-author="${encodeURIComponent(deal.store || '')}">🛒 COD অর্ডার</button>
+          </div>
         `;
         dealsWrap.appendChild(card);
       });
@@ -781,8 +838,9 @@
             ${subjHtml}
             ${priceHtml}
             <div style="display:flex; flex-wrap:wrap; gap:6px; margin-top:8px;">
-              <button class="bb-chip" style="padding:4px 8px; font-size:11px;" data-prompt="${book.title} বইটির দাম কত?">💰 লাইভ দাম দেখুন</button>
+              <button class="bb-chip bb-stream-compare-btn" style="padding:4px 8px; font-size:11px;" data-title="${encodeURIComponent(book.title)}">💰 লাইভ দাম দেখুন</button>
               <button class="bb-chip" style="padding:4px 8px; font-size:11px;" data-prompt="${book.title} বইটির সূচিপত্র ও বিষয়বস্তু কি?">📑 সূচিপত্র</button>
+              <button class="bb-chip bb-order-trigger-btn" style="padding:4px 8px; font-size:11px; background:#059669; color:#fff; border-color:#059669; font-weight:600;" data-book="${encodeURIComponent(book.title)}" data-price="${book.price || 0}" data-author="${encodeURIComponent(book.author || '')}">🛒 অর্ডার করুন (COD)</button>
             </div>
           </div>
         `;
@@ -817,8 +875,28 @@
     }
   }
 
-  // Handle Quick Chips Click
+  // Handle Quick Chips, Streaming Compare, and COD Order Clicks
   messagesList.addEventListener('click', function (e) {
+    var orderBtn = e.target.closest('.bb-order-trigger-btn');
+    if (orderBtn) {
+      e.preventDefault();
+      var bTitle = decodeURIComponent(orderBtn.getAttribute('data-book') || '');
+      var bPrice = parseInt(orderBtn.getAttribute('data-price') || '0', 10);
+      var bAuth = decodeURIComponent(orderBtn.getAttribute('data-author') || '');
+      openOrderModal(bTitle, bPrice, bAuth);
+      return;
+    }
+
+    var streamBtn = e.target.closest('.bb-stream-compare-btn');
+    if (streamBtn && !isTyping) {
+      e.preventDefault();
+      var sTitle = decodeURIComponent(streamBtn.getAttribute('data-title') || '');
+      if (sTitle) {
+        startLiveStreamCompare(sTitle);
+      }
+      return;
+    }
+
     var chip = e.target.closest('.bb-chip');
     if (chip && !isTyping) {
       var prompt = chip.getAttribute('data-prompt') || chip.textContent.trim();
@@ -826,6 +904,180 @@
       handleSendMessage();
     }
   });
+
+  // COD Order Modal Logic
+  var orderModal = document.getElementById('bb-order-modal');
+  var orderCloseBtn = document.getElementById('bb-order-close-btn');
+  var orderForm = document.getElementById('bb-order-form');
+  var ordDispTitle = document.getElementById('bb-ord-disp-title');
+  var ordDispPrice = document.getElementById('bb-ord-disp-price');
+  var ordDispTotal = document.getElementById('bb-ord-disp-total');
+  var ordBookTitle = document.getElementById('bb-ord-book-title');
+  var ordBookPrice = document.getElementById('bb-ord-book-price');
+  var ordBookAuthor = document.getElementById('bb-ord-book-author');
+  var ordName = document.getElementById('bb-ord-name');
+  var ordPhone = document.getElementById('bb-ord-phone');
+  var ordAddr = document.getElementById('bb-ord-addr');
+  var ordErrorBox = document.getElementById('bb-ord-error-box');
+  var ordSubmitBtn = document.getElementById('bb-ord-submit-btn');
+
+  function openOrderModal(title, price, author) {
+    if (!title) return;
+    price = price || 0;
+    var total = price + 60;
+    ordDispTitle.textContent = title;
+    ordDispPrice.textContent = '৳' + price;
+    ordDispTotal.textContent = '৳' + total;
+    ordBookTitle.value = title;
+    ordBookPrice.value = price;
+    ordBookAuthor.value = author || '';
+    ordErrorBox.style.display = 'none';
+    ordSubmitBtn.disabled = false;
+    ordSubmitBtn.innerHTML = '<span>অর্ডার নিশ্চিত করুন (COD) 🚀</span>';
+    orderModal.style.display = 'flex';
+  }
+
+  function closeOrderModal() {
+    orderModal.style.display = 'none';
+  }
+
+  if (orderCloseBtn) {
+    orderCloseBtn.addEventListener('click', closeOrderModal);
+  }
+
+  if (orderForm) {
+    orderForm.addEventListener('submit', function (e) {
+      e.preventDefault();
+      var nameVal = ordName.value.trim();
+      var phoneVal = ordPhone.value.trim();
+      var addrVal = ordAddr.value.trim();
+      var titleVal = ordBookTitle.value.trim();
+      var priceVal = parseInt(ordBookPrice.value || '0', 10);
+      var authVal = ordBookAuthor.value.trim();
+
+      if (!nameVal || !phoneVal || !addrVal) {
+        ordErrorBox.textContent = 'দয়া করে নাম, সঠিক ফোন নম্বর ও ঠিকানা পূরণ করুন।';
+        ordErrorBox.style.display = 'block';
+        return;
+      }
+
+      ordSubmitBtn.disabled = true;
+      ordSubmitBtn.innerHTML = '<span>অর্ডার প্রক্রিয়া হচ্ছে... ⏳</span>';
+      ordErrorBox.style.display = 'none';
+
+      fetch(API_HOST + '/api/salesman/order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          book_title: titleVal,
+          customer_name: nameVal,
+          customer_phone: phoneVal,
+          customer_address: addrVal,
+          merchant_id: merchantId,
+          book_author: authVal,
+          price: priceVal,
+          quantity: 1,
+          district: 'ঢাকা'
+        })
+      })
+      .then(function (res) { return res.json(); })
+      .then(function (data) {
+        if (data.status === 'success') {
+          closeOrderModal();
+          orderForm.reset();
+          appendAssistantMessage(
+            `🎉 **ধন্যবাদ ${data.customer_name}!**\\n\\n` +
+            `আপনার **'${data.book_title}'** বইটির ক্যাশ অন ডেলিভারি অর্ডার সফলভাবে গৃহীত হয়েছে।\\n` +
+            `🔹 **অর্ডার আইডি:** \`${data.order_id}\`\\n` +
+            `🔹 **সর্বমোট প্রদেয়:** ৳${data.total_amount} (ডেলিভারি চার্জ সহ)\\n` +
+            `🔹 **ডেলিভারি সময়সীমা:** ${data.delivery_timeline}\\n\\n` +
+            `আমাদের প্রতিনিধি শীঘ্রই আপনার ঠিকানায় বইটি পৌঁছে দেবেন। ভালো থাকুন, বইয়ের সাথে থাকুন!`
+          );
+        } else {
+          ordErrorBox.textContent = data.message || 'অর্ডারে ত্রুটি হয়েছে। আবার চেষ্টা করুন।';
+          ordErrorBox.style.display = 'block';
+          ordSubmitBtn.disabled = false;
+          ordSubmitBtn.innerHTML = '<span>অর্ডার নিশ্চিত করুন (COD) 🚀</span>';
+        }
+      })
+      .catch(function (err) {
+        ordErrorBox.textContent = 'সংযোগ সমস্যা। আবার চেষ্টা করুন।';
+        ordErrorBox.style.display = 'block';
+        ordSubmitBtn.disabled = false;
+        ordSubmitBtn.innerHTML = '<span>অর্ডার নিশ্চিত করুন (COD) 🚀</span>';
+      });
+    });
+  }
+
+  // Progressive Server-Sent Events (SSE) Live Scraping
+  function startLiveStreamCompare(title) {
+    if (!title || isTyping) return;
+    appendUserMessage(title + ' বইটির লাইভ সেরা দাম কত?');
+
+    var streamMsg = document.createElement('div');
+    streamMsg.className = 'bb-msg bb-msg-assistant';
+    streamMsg.innerHTML = `
+      <p>🔍 <strong>${title}</strong> বইটির লাইভ দাম ও স্টক ২১টি শীর্ষ বুকশপ ও প্রকাশনীতে যাচাই হচ্ছে...</p>
+      <div class="bb-stream-stat" style="font-size:12px; font-weight:600; color:#4338ca; background:#eef2ff; padding:4px 8px; border-radius:6px; margin:6px 0; display:inline-block;">
+        ⏳ ০/২১টি শপ চেক সম্পন্ন...
+      </div>
+      <div class="bb-stream-results" style="display:flex; flex-direction:column; gap:6px; margin-top:8px;"></div>
+    `;
+    messagesList.appendChild(streamMsg);
+    scrollToBottom();
+
+    var statElem = streamMsg.querySelector('.bb-stream-stat');
+    var resultsElem = streamMsg.querySelector('.bb-stream-results');
+
+    var evt = new EventSource(API_HOST + '/api/compare/stream?query=' + encodeURIComponent(title) + '&merchant=' + encodeURIComponent(merchantId));
+    var foundShops = {};
+
+    evt.addEventListener('store_result', function (e) {
+      try {
+        var data = JSON.parse(e.data);
+        statElem.textContent = `⚡ ${data.completed}/${data.total}টি শপ যাচাই সম্পন্ন...`;
+        
+        if (data.items && data.items.length > 0) {
+          data.items.forEach(function (item) {
+            if (!foundShops[item.store]) {
+              foundShops[item.store] = true;
+              var card = document.createElement('div');
+              card.className = 'bb-deal-card';
+              card.innerHTML = `
+                <div class="bb-deal-info">
+                  <span class="bb-deal-store">${item.store}</span>
+                  <div>
+                    <span class="bb-deal-price">৳${item.price}</span>
+                  </div>
+                  <span class="bb-deal-stock">${item.stock_text || (item.in_stock ? '● স্টকে আছে' : '○ স্টক সীমিত')}</span>
+                </div>
+                <div style="display:flex; gap:6px; align-items:center;">
+                  ${item.url ? `<a href="${item.url}" target="_blank" rel="noopener noreferrer" class="bb-deal-btn">লিংক ↗</a>` : ''}
+                  <button class="bb-deal-btn bb-order-trigger-btn" style="background:#059669; border-color:#059669; cursor:pointer;" data-book="${encodeURIComponent(title)}" data-price="${item.price || 0}" data-author="${encodeURIComponent(item.store || '')}">🛒 COD অর্ডার</button>
+                </div>
+              `;
+              resultsElem.appendChild(card);
+              scrollToBottom();
+            }
+          });
+        }
+      } catch (err) {}
+    });
+
+    evt.addEventListener('complete', function (e) {
+      try {
+        var data = JSON.parse(e.data);
+        statElem.style.background = '#ecfdf5';
+        statElem.style.color = '#059669';
+        statElem.textContent = `✅ সম্পন্ন! ২১টি শপে মোট ${data.total_found}টি বই পাওয়া গেছে।`;
+      } catch (err) {}
+      evt.close();
+    });
+
+    evt.onerror = function () {
+      evt.close();
+    };
+  }
 
   // Send Message Logic
   function handleSendMessage() {

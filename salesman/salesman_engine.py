@@ -852,6 +852,34 @@ class SalesmanAgent:
             clean_q = [w for w in user_message.split() if w not in STOP_WORDS]
             candidates = self.catalog.search(keywords=clean_q[:3], limit=4)
 
+        # 2b. Smart SQLite FTS5 & Bangla Typo Tolerance Fallback
+        typo_notice = None
+        if not candidates or len(candidates) < 2:
+            try:
+                from salesman.catalog_fts import search_fts_smart
+                clean_user_words = [w for w in user_message.split() if w not in STOP_WORDS and len(w) > 2]
+                fts_query = " ".join(clean_user_words) if clean_user_words else user_message
+                fts_res = search_fts_smart(
+                    fts_query,
+                    limit=4,
+                    author_filter=intent.get("author"),
+                    publisher_filter=intent.get("publisher"),
+                    max_price=intent.get("max_price")
+                )
+                if fts_res.get("books"):
+                    if not candidates:
+                        candidates = fts_res["books"]
+                    else:
+                        existing_ids = {c.get("id") for c in candidates}
+                        for fb in fts_res["books"]:
+                            if fb.get("id") not in existing_ids:
+                                candidates.append(fb)
+
+                    if fts_res.get("corrected") and fts_res.get("corrected_query"):
+                        typo_notice = f"💡 আপনি কি '**{fts_res['corrected_query']}**' খুঁজছেন? নিচে বইটির বিস্তারিত ও সেরা অফার দেওয়া হলো:"
+            except Exception as e:
+                print(f"[Salesman] FTS Smart Search error: {e}")
+
         # 3. Live Price Scraping: ONLY when user explicitly asks for price OR when only 1 book is identified for price check
         live_deal_info = None
         top_deals = []
@@ -936,6 +964,9 @@ class SalesmanAgent:
         if not reply_text:
             reply_text = self._generate_heuristic_reply(user_message, candidates, live_deal_info, intent, merchant=merchant, top_deals=top_deals)
 
+        if typo_notice:
+            reply_text = f"{typo_notice}\n\n{reply_text}"
+
         self.sessions.add_history(session_id, "user", user_message)
         self.sessions.add_history(session_id, "salesman", reply_text)
 
@@ -946,6 +977,9 @@ class SalesmanAgent:
             "credits_left": credits_left,
             "session_id": session_id,
             "wants_price": intent["wants_price"],
+            "allow_order": True,
+            "order_book": candidates[0] if candidates else None,
+            "typo_corrected": bool(typo_notice),
             "merchant": {
                 "id": merchant["id"],
                 "name": merchant["name"],
