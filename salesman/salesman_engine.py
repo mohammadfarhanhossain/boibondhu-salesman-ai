@@ -486,6 +486,17 @@ def match_topic(message):
 # ==============================================================================
 # 3. SALESMAN AI AGENT
 # ==============================================================================
+CURATED_AUTHOR_BESTSELLERS = {
+    "হুমায়ূন আহমেদ": ["শঙ্খনীল কারাগার", "নন্দিত নরকে", "দেবী", "জোছনা ও জননীর গল্প", "আগুনের পরশমণি"],
+    "আরিফ আজাদ": ["প্যারাডক্সিক্যাল সাজিদ", "প্যারাডক্সিক্যাল সাজিদ ২", "বেলা ফুরাবার আগে", "প্রশান্তি", "এবার ভিন্ন কিছু হোক"],
+    "ঝংকার মাহবুব": ["হাবলুদের জন্য প্রোগ্রামিং", "প্রোগ্রামিংয়ের বলদ টু বস", "রিচার্জ আপনার ঈমান", "লড়াকু"],
+    "তামিম শাহরিয়ার সুবিন": ["কম্পিউটার প্রোগ্রামিং ১ম খণ্ড", "কম্পিউটার প্রোগ্রামিং ২য় খণ্ড", "৫০টি প্রোগ্রামিং সমস্যা ও সমাধান"],
+    "মুহম্মদ জাফর ইকবাল": ["দীপু নাম্বার টু", "আমি তপু", "কপোট্রনিক সুখ দুঃখ", "টি-রেক্সের পদধ্বনি"],
+    "সমরেশ মজুমদার": ["উত্তরাধিকার", "কালবেলা", "কালপুরুষ", "সাতকাহন"],
+    "রবীন্দ্রনাথ ঠাকুর": ["গীতাঞ্জলি", "শেষের কবিতা", "চোখের বালি", "গল্পগুচ্ছ"],
+    "কাজী নজরুল ইসলাম": ["অগ্নিবীণা", "সঞ্চিতা", "বাঁধন হারা", "রিক্তের বেদন"]
+}
+
 class SalesmanAgent:
     def __init__(self):
         self.catalog = CatalogIndex.get_instance()
@@ -712,15 +723,18 @@ class SalesmanAgent:
             raise Exception(f"Gemini API Error ({response.status_code}): {response.text}")
 
     def _is_ollama_alive(self):
-        """Checks if local Ollama server is running (100% OFFLINE AI)."""
+        """Checks if local Ollama server is running with fast 0.2s ping."""
         try:
-            r = requests.get("http://localhost:11434/api/tags", timeout=0.8)
-            return r.status_code == 200
+            r = requests.get("http://localhost:11434/api/tags", timeout=0.2)
+            if r.status_code == 200:
+                models = [m.get("name", "") for m in r.json().get("models", [])]
+                return any("qwen" in m or "llama" in m for m in models)
+            return False
         except Exception:
             return False
 
     def _call_local_ollama(self, prompt, conversation_history=None, merchant=None, model="qwen2.5:3b"):
-        """Calls local Ollama instance (100% OFFLINE) on http://localhost:11434 with fast, safe execution."""
+        """Calls local Ollama instance with fast timeout so UI never hangs."""
         is_store_exclusive = bool(merchant and merchant.get("mode") == "store_exclusive")
         store_name = merchant["name"] if merchant else "বইবন্ধু"
 
@@ -748,12 +762,126 @@ class SalesmanAgent:
                 "num_predict": 180
             }
         }
-        res = requests.post("http://localhost:11434/api/chat", json=payload, timeout=5)
-        if res.status_code == 200:
-            content = res.json().get("message", {}).get("content", "").strip()
-            if len(content) > 60:
-                return content
+        try:
+            res = requests.post("http://localhost:11434/api/chat", json=payload, timeout=1.2)
+            if res.status_code == 200:
+                content = res.json().get("message", {}).get("content", "").strip()
+                if len(content) > 60:
+                    return content
+        except Exception:
+            pass
         return ""
+
+    def _find_exact_catalog_book_and_deals(self, user_message, author_hint=None):
+        """
+        Fast 1-2ms exact and near-exact title resolver against master_store_catalog (269k+ records).
+        Resolves queries like 'shonkhonil karagar er dam koto?', 'paradoxical sajid boita ache?'
+        """
+        try:
+            from salesman.catalog_fts import normalize_bangla_phonetic, DB_PATH
+            import sqlite3
+            cleaned = re.sub(r'[^\w\s\u0980-\u09FF]', ' ', user_message)
+            stop_patterns = [
+                r'\s+এর\s+দাম\s+কত.*$', r'\s+এর\s+দাম\s+কতো.*$', r'\s+দাম\s+কত.*$', r'\s+দাম\s+কতো.*$',
+                r'\s+কত\s+টাকা.*$', r'\s+কতো\s+টাকা.*$', r'\s+প্রাইস\s+কত.*$',
+                r'\s+বইটা\s+কি\s+পাওয়া\s+যাবে.*$', r'\s+বইটি\s+কি\s+পাওয়া\s+যাবে.*$',
+                r'\s+পাওয়া\s+যাবে\s+কিনা.*$', r'\s+পাওয়া\s+যাবে.*$', r'\s+আছে\s+কিনা.*$',
+                r'\s+বইটা\s+আছে.*$', r'\s+বইটি\s+আছে.*$', r'\s+বই\s+আছে.*$',
+                r'\s+বইটা\s+লাগবে.*$', r'\s+বইটি\s+লাগবে.*$', r'\s+বই\s+লাগবে.*$',
+                r'\s+বইটা.*$', r'\s+বইটি.*$', r'\s+বইগুলো.*$', r'\s+বই.*$',
+                r'\s+সাজেস্ট\s+করো.*$', r'\s+সাজেস্ট\s+করুন.*$'
+            ]
+            for pat in stop_patterns:
+                cleaned = re.sub(pat, '', cleaned, flags=re.IGNORECASE)
+            core_title = cleaned.strip()
+            if not core_title or len(core_title) < 2:
+                return None, []
+
+            norm = normalize_bangla_phonetic(core_title)
+            if not norm or len(norm) < 2:
+                return None, []
+
+            conn = sqlite3.connect(DB_PATH)
+            cur = conn.cursor()
+
+            # 1. Exact match on normalized title
+            row = None
+            if author_hint:
+                norm_auth = normalize_bangla_phonetic(author_hint)
+                cur.execute("""
+                    SELECT DISTINCT book_name, author_name, publisher_name, subject_name
+                    FROM master_store_catalog
+                    WHERE norm_name = ? AND norm_name LIKE ?
+                    LIMIT 1
+                """, (norm, f"%{norm_auth}%"))
+                row = cur.fetchone()
+
+            if not row:
+                cur.execute("""
+                    SELECT DISTINCT book_name, author_name, publisher_name, subject_name
+                    FROM master_store_catalog
+                    WHERE norm_name = ?
+                    LIMIT 1
+                """, (norm,))
+                row = cur.fetchone()
+
+            # 2. Substring match ordered by shortest title (ensures 'শঙ্খনীল কারাগার' doesn't pick 'কারাগার')
+            if not row:
+                cur.execute("""
+                    SELECT DISTINCT book_name, author_name, publisher_name, subject_name
+                    FROM master_store_catalog
+                    WHERE norm_name LIKE ?
+                    ORDER BY length(norm_name) ASC
+                    LIMIT 1
+                """, (f"%{norm}%",))
+                row = cur.fetchone()
+
+            if not row:
+                conn.close()
+                return None, []
+
+            book_info = {
+                "title": row[0],
+                "author": row[1] or "অজ্ঞাত",
+                "publisher": row[2] or "অজ্ঞাত",
+                "subject": row[3] or "সাধারণ বই",
+                "price": 0,
+                "id": f"bk_{abs(hash(row[0])) % 1000000}"
+            }
+
+            matched_norm = normalize_bangla_phonetic(row[0])
+            cur.execute("""
+                SELECT store, price, regular_price, url
+                FROM master_store_catalog
+                WHERE norm_name = ? AND price > 0
+                ORDER BY price ASC
+            """, (matched_norm,))
+            deal_rows = cur.fetchall()
+            conn.close()
+
+            deals = []
+            seen = set()
+            for d in deal_rows:
+                if d[0] not in seen:
+                    seen.add(d[0])
+                    deals.append({
+                        "store": d[0],
+                        "price": d[1],
+                        "regular_price": d[2],
+                        "savings": max(0, d[2] - d[1]),
+                        "url": d[3],
+                        "in_stock": True,
+                        "stock_text": "স্টকে আছে"
+                    })
+
+            if deals:
+                book_info["price"] = deals[0]["price"]
+                book_info["regular_price"] = deals[0]["regular_price"]
+
+            return book_info, deals
+        except Exception as e:
+            print(f"[Salesman] _find_exact_catalog_book_and_deals error: {e}")
+            return None, []
 
     def _is_human_handover(self, message):
         """Detects if message is asking for urgent delivery, human agent, bargaining, return, or payment support."""
@@ -827,25 +955,95 @@ class SalesmanAgent:
         intent = self._extract_intent_heuristics(user_message)
         topic_data = intent.get("topic_data")
 
-        # 2. Search catalog with Author + Publisher + Subject + Boost Titles + Keywords
-        search_kw = list(intent["keywords"])
-        boost_titles = []
-        if topic_data:
-            search_kw.extend(topic_data.get("boost_keywords", []))
-            boost_titles = topic_data.get("curated", [])
+        # 1b. Fast Exact Book Resolution from master_store_catalog (269k+ records)
+        exact_book, exact_deals = self._find_exact_catalog_book_and_deals(user_message, author_hint=intent.get("author"))
+        candidates = []
+        top_deals = []
 
-        search_subject = intent["subject"] or (topic_data.get("subject") if topic_data else None)
+        if exact_book:
+            candidates = [exact_book]
+            top_deals = exact_deals
+            intent["wants_price"] = True
+        elif intent.get("author"):
+            # Author-specific query (e.g. 'humayun ahmed er boi')
+            try:
+                from salesman.catalog_fts import normalize_bangla_phonetic, DB_PATH
+                import sqlite3
+                conn = sqlite3.connect(DB_PATH)
+                cur = conn.cursor()
+                norm_a = normalize_bangla_phonetic(intent["author"])
+                curated_titles = None
+                for auth_k, titles in CURATED_AUTHOR_BESTSELLERS.items():
+                    if normalize_bangla_phonetic(auth_k) in norm_a or norm_a in normalize_bangla_phonetic(auth_k):
+                        curated_titles = titles
+                        break
 
-        candidates = self.catalog.search(
-            keywords=search_kw,
-            author=intent["author"],
-            publisher=intent["publisher"],
-            subject_filter=search_subject,
-            boost_titles=boost_titles,
-            min_price=intent["min_price"],
-            max_price=intent["max_price"],
-            limit=4
-        )
+                if curated_titles:
+                    for bt in curated_titles[:4]:
+                        cur.execute("""
+                            SELECT DISTINCT book_name, author_name, publisher_name, subject_name, min(price), regular_price, url
+                            FROM master_store_catalog
+                            WHERE norm_name = ? AND price > 0
+                        """, (normalize_bangla_phonetic(bt),))
+                        r = cur.fetchone()
+                        if r and r[0]:
+                            candidates.append({
+                                "title": r[0],
+                                "author": r[1] or intent["author"],
+                                "publisher": r[2] or "অজ্ঞাত",
+                                "subject": r[3] or "সাহিত্য",
+                                "price": r[4] or 0,
+                                "regular_price": r[5] or 0,
+                                "url": r[6] or "",
+                                "id": f"bk_{abs(hash(r[0])) % 1000000}"
+                            })
+
+                if not candidates:
+                    cur.execute("""
+                        SELECT DISTINCT book_name, author_name, publisher_name, subject_name, min(price), regular_price, url
+                        FROM master_store_catalog
+                        WHERE author_name LIKE ? OR norm_name LIKE ?
+                        GROUP BY book_name
+                        ORDER BY (price > 0) DESC, length(book_name) DESC
+                        LIMIT 4
+                    """, (f"%{intent['author']}%", f"%{norm_a}%"))
+                    rows = cur.fetchall()
+                    if rows:
+                        for r in rows:
+                            candidates.append({
+                                "title": r[0],
+                                "author": r[1] or intent["author"],
+                                "publisher": r[2] or "অজ্ঞাত",
+                                "subject": r[3] or "সাধারণ বই",
+                                "price": r[4] or 0,
+                                "regular_price": r[5] or 0,
+                                "url": r[6] or "",
+                                "id": f"bk_{abs(hash(r[0])) % 1000000}"
+                            })
+                conn.close()
+            except Exception as e:
+                print(f"[Salesman] Author search error: {e}")
+
+        # 2. General catalog search if not already satisfied by exact book or author
+        if not candidates:
+            search_kw = list(intent["keywords"])
+            boost_titles = []
+            if topic_data:
+                search_kw.extend(topic_data.get("boost_keywords", []))
+                boost_titles = topic_data.get("curated", [])
+
+            search_subject = intent["subject"] or (topic_data.get("subject") if topic_data else None)
+
+            candidates = self.catalog.search(
+                keywords=search_kw,
+                author=intent["author"],
+                publisher=intent["publisher"],
+                subject_filter=search_subject,
+                boost_titles=boost_titles,
+                min_price=intent["min_price"],
+                max_price=intent["max_price"],
+                limit=4
+            )
 
         # Fallback if specific search gave empty
         if not candidates and intent["publisher"]:
@@ -888,37 +1086,68 @@ class SalesmanAgent:
             except Exception as e:
                 print(f"[Salesman] FTS Smart Search error: {e}")
 
-        # 3. Live Price Scraping: ONLY when user explicitly asks for price OR when only 1 book is identified for price check
+        # Enrich candidate prices from master_store_catalog so price is never 0
+        for c in candidates:
+            if not c.get("price") or c["price"] == 0:
+                try:
+                    from salesman.catalog_fts import normalize_bangla_phonetic, DB_PATH
+                    import sqlite3
+                    conn = sqlite3.connect(DB_PATH)
+                    cur = conn.cursor()
+                    cur.execute("""
+                        SELECT min(price), regular_price, store, url
+                        FROM master_store_catalog
+                        WHERE norm_name = ? AND price > 0
+                    """, (normalize_bangla_phonetic(c["title"]),))
+                    p_row = cur.fetchone()
+                    conn.close()
+                    if p_row and p_row[0]:
+                        c["price"] = p_row[0]
+                        c["regular_price"] = p_row[1] or p_row[0]
+                        c["store"] = p_row[2]
+                        if not c.get("url"):
+                            c["url"] = p_row[3]
+                except Exception:
+                    pass
+
+        # 3. Live Price / Store Lookup: Use fast offline master deals across 21 stores (1ms)
         live_deal_info = None
-        top_deals = []
 
         if intent["wants_price"] and candidates:
             primary_book = candidates[0]
-            try:
-                target_store = merchant.get("store_key") if merchant.get("mode") == "store_exclusive" else None
-                compare_res = compare_books(primary_book["title"], target_store=target_store)
-                top_deals = compare_res.get("top_5") or compare_res.get("top_3", [])
-                if top_deals:
-                    best = top_deals[0]
-                    # Attach image to candidates if available from live scrapers
-                    if best.get("image"):
-                        primary_book["image"] = best["image"]
-                        for c_book in candidates:
-                            if not c_book.get("image"):
-                                c_book["image"] = best["image"]
+            if not top_deals:
+                try:
+                    from salesman.init_master_stores import get_offline_master_deals
+                    cat_deals = get_offline_master_deals(primary_book["title"])
+                    if cat_deals:
+                        top_deals = cat_deals
+                except Exception:
+                    pass
 
-                    live_deal_info = {
-                        "book": primary_book["title"],
-                        "best_store": best["store"],
-                        "best_price": best["price"],
-                        "regular_price": best.get("regular_price"),
-                        "in_stock": best["in_stock"],
-                        "url": best["url"],
-                        "image": best.get("image", ""),
-                        "stock_text": best.get("stock_text", "স্টকে আছে"),
-                    }
-            except Exception as e:
-                print(f"[Salesman] Price comparator error: {e}")
+            if not top_deals:
+                try:
+                    target_store = merchant.get("store_key") if merchant.get("mode") == "store_exclusive" else None
+                    compare_res = compare_books(primary_book["title"], target_store=target_store)
+                    top_deals = compare_res.get("top_5") or compare_res.get("top_3", [])
+                except Exception as e:
+                    print(f"[Salesman] Price comparator error: {e}")
+
+            if top_deals:
+                best = top_deals[0]
+                primary_book["price"] = best["price"]
+                primary_book["regular_price"] = best.get("regular_price")
+                if best.get("image"):
+                    primary_book["image"] = best["image"]
+                live_deal_info = {
+                    "book": primary_book["title"],
+                    "best_store": best["store"],
+                    "best_price": best["price"],
+                    "regular_price": best.get("regular_price"),
+                    "in_stock": best.get("in_stock", True),
+                    "url": best.get("url", ""),
+                    "image": best.get("image", ""),
+                    "stock_text": best.get("stock_text", "স্টকে আছে"),
+                }
 
         # 4. Generate Salesman Pitch
         # Priority 1: Local Ollama (100% OFFLINE AI running on localhost:11434 with qwen2.5:3b)

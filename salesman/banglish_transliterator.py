@@ -60,6 +60,9 @@ BANGLISH_DICTIONARY = {
     "paromanobik ovvas": "পারমাণবিক অভ্যাস",
     "paromanik obbhas": "পারমাণবিক অভ্যাস",
     "debi": "দেবী",
+    "devi": "দেবী",
+    "nishithini": "নিশীথিনী",
+    "nisithini": "নিশীথিনী",
     "misir ali": "মিসির আলি",
     "himu": "হিমু",
     "opekkha": "অপেক্ষা",
@@ -103,7 +106,23 @@ BANGLISH_DICTIONARY = {
     "kobita": "কবিতা",
     "natok": "নাটক",
 
-    # Conversational Words
+    # Conversational Words & Pronouns
+    "amar": "আমার",
+    "amader": "আমাদের",
+    "mon kharap": "মন খারাপ",
+    "mon": "মন",
+    "kharap": "খারাপ",
+    "kichu": "কিছু",
+    "koro": "করো",
+    "korun": "করুন",
+    "pawa jabe": "পাওয়া যাবে",
+    "pawa": "পাওয়া",
+    "jabe": "যাবে",
+    "kina": "কিনা",
+    "lagbe": "লাগবে",
+    "ache": "আছে",
+    "boita": "বইটা",
+    "boiti": "বইটি",
     "boi": "বই",
     "boigulo": "বইগুলো",
     "boi er": "বইয়ের",
@@ -119,9 +138,25 @@ BANGLISH_DICTIONARY = {
     "sugest": "সাজেস্ট",
     "dam": "দাম",
     "dam koto": "দাম কত",
+    "price": "দাম",
+    "price koto": "দাম কত",
     "koto": "কত",
+    "taka": "টাকা",
+    "shekhar": "শেখার",
+    "shekha": "শেখা",
     "jonno": "জন্য",
-    "er": "এর"
+    "er": "এর",
+
+    # More Bestselling Titles
+    "recharge your iman": "রিচার্জ আপনার ঈমান",
+    "recharge your down": "রিচার্জ আপনার ঈমান",
+    "habluder jonno programming": "হাবলুদের জন্য প্রোগ্রামিং",
+    "hablu": "হাবলু",
+    "nondito noroke": "নন্দিত নরকে",
+    "jochona o jononir golpo": "জোছনা ও জননীর গল্প",
+    "aguner poroshmoni": "আগুনের পরশমণি",
+    "ekattorer dinguli": "একাত্তরের দিনগুলি",
+    "amar bondhu rashed": "আমার বন্ধু রাশেদ"
 }
 
 # Phonetic consonants and clusters

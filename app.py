@@ -64,579 +64,1388 @@ def set_cached(key, data):
 # ==============================================================================
 # HTML TEMPLATE
 # ==============================================================================
-HTML_TEMPLATE = """
-<!DOCTYPE html>
+HTML_TEMPLATE = """<!DOCTYPE html>
 <html lang="bn">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>বইয়ের লাইভ দাম তুলনা | Real-time Book Price Comparator</title>
+<title>বইবন্ধু ডট কম | বাংলাদেশের বৃহত্তম অনলাইন বইয়ের মার্কেটপ্লেস ও প্রাইজ কম্প্যারিজন</title>
 <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 :root {
-  --primary: #1e3a8a;
-  --primary-light: #3b82f6;
-  --gold: #f59e0b;
-  --silver: #94a3b8;
-  --bronze: #d97706;
-  --green: #10b981;
-  --red: #ef4444;
-  --bg: #f8fafc;
+  --wafi-green: #008060;
+  --wafi-green-dark: #005a36;
+  --wafi-green-light: #e6f7f2;
+  --wafi-orange: #ea580c;
+  --wafi-yellow: #f59e0b;
+  --dark-text: #1e293b;
+  --muted-text: #64748b;
+  --light-bg: #f8fafc;
   --card-bg: #ffffff;
-  --text: #1e293b;
-  --text-muted: #64748b;
   --border: #e2e8f0;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.06);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
+  --shadow-lg: 0 10px 25px rgba(0,0,0,0.12);
 }
+
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body {
   font-family: 'Hind Siliguri', sans-serif;
-  background: var(--bg);
-  color: var(--text);
+  background: var(--light-bg);
+  color: var(--dark-text);
   line-height: 1.6;
-  padding-bottom: 60px;
 }
-header {
-  background: linear-gradient(135deg, #1e3a8a, #0f172a);
-  color: white;
-  padding: 40px 20px 30px;
-  text-align: center;
-}
-.header-badge {
-  display: inline-block;
-  background: rgba(255,255,255,0.15);
-  backdrop-filter: blur(4px);
-  padding: 4px 14px;
-  border-radius: 999px;
-  font-size: 13px;
-  margin-bottom: 12px;
-  font-weight: 500;
-}
-h1 { font-size: 32px; font-weight: 700; margin-bottom: 8px; }
-.subtitle { color: #cbd5e1; font-size: 16px; max-width: 600px; margin: 0 auto; }
 
-.container {
-  max-width: 1100px;
-  margin: -25px auto 0;
+a { color: inherit; text-decoration: none; }
+
+/* 1. TOP ANNOUNCEMENT BAR */
+.top-bar {
+  background: var(--wafi-green-dark);
+  color: #ffffff;
+  font-size: 13px;
+  padding: 6px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+.top-bar-inner {
+  max-width: 1240px;
+  margin: 0 auto;
   padding: 0 16px;
-}
-.search-box {
-  background: white;
-  padding: 16px;
-  border-radius: 16px;
-  box-shadow: 0 10px 25px -5px rgba(0,0,0,0.08);
-  border: 1px solid var(--border);
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-.search-form {
-  display: flex;
-  gap: 10px;
-}
-.search-input {
-  flex: 1;
-  padding: 14px 20px;
-  font-size: 16px;
-  border: 1.5px solid var(--border);
-  border-radius: 10px;
-  font-family: inherit;
-  outline: none;
-  transition: border-color 0.2s;
-}
-.search-input:focus { border-color: var(--primary-light); }
-.search-btn {
-  background: var(--primary);
-  color: white;
-  border: none;
-  padding: 0 28px;
-  font-size: 16px;
-  font-weight: 600;
-  border-radius: 10px;
-  cursor: pointer;
-  font-family: inherit;
-  transition: background 0.2s;
-}
-.search-btn:hover { background: #172554; }
-
-.filters {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-  font-size: 14px;
-}
-.filter-label { color: var(--text-muted); font-weight: 500; }
-.filter-btn {
-  background: #f1f5f9;
-  border: 1px solid var(--border);
-  padding: 6px 14px;
-  border-radius: 8px;
-  cursor: pointer;
-  font-family: inherit;
-  color: var(--text);
-  font-weight: 500;
-  transition: all 0.2s;
-  text-decoration: none;
-}
-.filter-btn.active {
-  background: var(--primary);
-  color: white;
-  border-color: var(--primary);
-}
-
-.tags {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 14px;
-  flex-wrap: wrap;
-  font-size: 13px;
-}
-.tag-item {
-  background: #e2e8f0;
-  color: #334155;
-  padding: 3px 10px;
-  border-radius: 6px;
-  text-decoration: none;
-}
-.tag-item:hover { background: #cbd5e1; }
-
-/* Top 3 Showcase Section */
-.top-section {
-  margin-top: 36px;
-}
-.section-title {
-  font-size: 22px;
-  font-weight: 700;
-  margin-bottom: 16px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.top-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(310px, 1fr));
-  gap: 16px;
-}
-.deal-card {
-  background: white;
-  border-radius: 14px;
-  padding: 20px;
-  border: 2px solid var(--border);
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.03);
-  transition: transform 0.2s, box-shadow 0.2s;
-}
-.deal-card:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 10px 20px rgba(0,0,0,0.06);
-}
-.deal-card.rank-1 { border-color: var(--gold); background: linear-gradient(180deg, #fffbeb, #ffffff); }
-.deal-card.rank-2 { border-color: var(--silver); background: linear-gradient(180deg, #f8fafc, #ffffff); }
-.deal-card.rank-3 { border-color: var(--bronze); background: linear-gradient(180deg, #fef3c7, #ffffff); }
-.deal-card.rank-4 { border-color: #3b82f6; background: linear-gradient(180deg, #eff6ff, #ffffff); }
-.deal-card.rank-5 { border-color: #8b5cf6; background: linear-gradient(180deg, #f5f3ff, #ffffff); }
-.deal-card.all-card { border-color: var(--border); background: #ffffff; }
-.deal-card.all-card.is-in-stock { border-top: 3px solid #10b981; }
-.deal-card.all-card.is-out-of-stock { border-top: 3px solid #ef4444; opacity: 0.92; }
-.all-card .rank-badge { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; }
-
-.rank-badge {
-  position: absolute;
-  top: -12px;
-  left: 16px;
-  padding: 3px 12px;
-  border-radius: 999px;
-  font-size: 12px;
-  font-weight: 700;
-  text-transform: uppercase;
-}
-.rank-1 .rank-badge { background: var(--gold); color: #78350f; }
-.rank-2 .rank-badge { background: var(--silver); color: #1e293b; }
-.rank-3 .rank-badge { background: var(--bronze); color: white; }
-.rank-4 .rank-badge { background: #3b82f6; color: white; }
-.rank-5 .rank-badge { background: #8b5cf6; color: white; }
-
-.deal-header {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
-  margin-top: 6px;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.top-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.top-right {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.top-right a:hover {
+  text-decoration: underline;
+}
+
+/* 2. MAIN HEADER */
+.main-header {
+  background: #ffffff;
+  border-bottom: 1px solid var(--border);
+  padding: 14px 0;
+  position: sticky;
+  top: 0;
+  z-index: 90;
+  box-shadow: var(--shadow-sm);
+}
+.header-inner {
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 0 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+}
+.logo-icon {
+  font-size: 32px;
+}
+.brand-name {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--wafi-green);
+  line-height: 1.1;
+  display: block;
+}
+.brand-domain {
+  color: var(--wafi-orange);
+}
+.brand-tag {
+  font-size: 11px;
+  color: var(--muted-text);
+  display: block;
+}
+
+/* MEGA SEARCH BAR */
+.mega-search-form {
+  flex: 1;
+  max-width: 620px;
+  display: flex;
+  align-items: center;
+  border: 2px solid var(--wafi-green);
+  border-radius: 8px;
+  overflow: hidden;
+  background: #ffffff;
+}
+.search-category-select {
+  padding: 10px 14px;
+  border: none;
+  background: #f1f5f9;
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--dark-text);
+  border-right: 1px solid var(--border);
+  outline: none;
+  cursor: pointer;
+}
+.search-input-wrap {
+  flex: 1;
+  display: flex;
+  position: relative;
+}
+.search-input {
+  width: 100%;
+  padding: 10px 14px;
+  border: none;
+  outline: none;
+  font-family: inherit;
+  font-size: 14px;
+}
+.search-btn {
+  background: var(--wafi-green);
+  color: #ffffff;
+  border: none;
+  padding: 0 20px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: background 0.2s;
+}
+.search-btn:hover {
+  background: var(--wafi-green-dark);
+}
+
+/* HEADER ICONS */
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.header-action-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 6px 10px;
+  border-radius: 6px;
+  transition: background 0.2s;
+}
+.header-action-btn:hover {
+  background: #f1f5f9;
+}
+.header-action-btn .icon {
+  font-size: 18px;
+}
+.cart-btn .badge {
+  background: var(--wafi-orange);
+  color: white;
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 10px;
+  font-weight: 700;
+}
+
+/* 3. SUB NAV MENU BAR */
+.sub-nav {
+  background: #0f172a;
+  color: #f8fafc;
+}
+.sub-nav-inner {
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 0 16px;
+  display: flex;
+  align-items: center;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+.nav-item {
+  padding: 10px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: background 0.2s, color 0.2s;
+  border-bottom: 2px solid transparent;
+}
+.nav-item:hover, .nav-item.active {
+  background: rgba(255,255,255,0.08);
+  border-bottom-color: var(--wafi-green);
+  color: #ffffff;
+}
+
+/* 4. HERO PROMOTIONAL BANNER */
+.hero-section {
+  max-width: 1240px;
+  margin: 16px auto;
+  padding: 0 16px;
+}
+.hero-banner {
+  background: linear-gradient(135deg, #065f46 0%, #047857 50%, #0f172a 100%);
+  color: #ffffff;
+  border-radius: 12px;
+  padding: 32px 36px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: var(--shadow-md);
+  position: relative;
+  overflow: hidden;
+}
+.hero-banner::after {
+  content: "📚";
+  position: absolute;
+  right: -20px;
+  bottom: -30px;
+  font-size: 180px;
+  opacity: 0.12;
+  pointer-events: none;
+}
+.hero-content {
+  max-width: 680px;
+  z-index: 1;
+}
+.hero-pill {
+  display: inline-block;
+  background: rgba(255,255,255,0.18);
+  backdrop-filter: blur(4px);
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 12px;
+  border: 1px solid rgba(255,255,255,0.25);
+}
+.hero-title {
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1.3;
   margin-bottom: 10px;
 }
-.store-tag {
-  background: #f1f5f9;
-  color: var(--primary);
+.hero-subtitle {
+  font-size: 15px;
+  opacity: 0.92;
+  margin-bottom: 20px;
+}
+.hero-btns {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.hero-btn-primary {
+  background: #ffffff;
+  color: var(--wafi-green-dark);
+  font-weight: 600;
+  padding: 10px 22px;
+  border-radius: 8px;
+  font-size: 14px;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.hero-btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0,0,0,0.2);
+}
+.hero-btn-secondary {
+  background: rgba(255,255,255,0.15);
+  color: #ffffff;
+  border: 1px solid rgba(255,255,255,0.3);
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+/* 5. BENEFITS BAR */
+.benefits-bar {
+  max-width: 1240px;
+  margin: 16px auto;
+  padding: 0 16px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 12px;
+}
+.benefit-item {
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-shadow: var(--shadow-sm);
+}
+.benefit-icon {
+  font-size: 26px;
+}
+.benefit-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--dark-text);
+}
+.benefit-desc {
   font-size: 12px;
-  font-weight: 700;
-  padding: 3px 8px;
-  border-radius: 6px;
+  color: var(--muted-text);
 }
-.store-type {
+
+/* 6. QUICK CATEGORY PILLS */
+.category-pills {
+  max-width: 1240px;
+  margin: 12px auto;
+  padding: 0 16px;
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 6px;
+}
+.cat-pill {
+  background: #ffffff;
+  border: 1px solid var(--border);
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  transition: all 0.2s;
+  cursor: pointer;
+}
+.cat-pill:hover, .cat-pill.active {
+  background: var(--wafi-green);
+  color: #ffffff;
+  border-color: var(--wafi-green);
+}
+
+/* 7. SHELVES & BOOK CARDS GRID */
+.shelf-section {
+  max-width: 1240px;
+  margin: 24px auto;
+  padding: 0 16px;
+}
+.shelf-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+  border-bottom: 2px solid #e2e8f0;
+  padding-bottom: 8px;
+}
+.shelf-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--dark-text);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.shelf-link {
+  font-size: 13px;
+  color: var(--wafi-green);
+  font-weight: 600;
+}
+.shelf-link:hover { text-decoration: underline; }
+
+.books-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(185px, 1fr));
+  gap: 16px;
+}
+
+/* WAFILIFE BOOK CARD */
+.book-card {
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.2s, box-shadow 0.2s;
+  position: relative;
+  cursor: pointer;
+}
+.book-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-md);
+  border-color: #cbd5e1;
+}
+
+.card-badge {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  background: var(--wafi-orange);
+  color: #ffffff;
   font-size: 11px;
-  color: var(--text-muted);
-}
-.deal-title {
-  font-size: 17px;
   font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 4px;
+  z-index: 2;
+}
+
+.book-card-cover {
+  width: 100%;
+  height: 180px;
+  background: #f1f5f9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+}
+.book-card-cover img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  transition: transform 0.3s;
+}
+.book-card:hover .book-card-cover img {
+  transform: scale(1.05);
+}
+.book-cover-placeholder {
+  font-size: 50px;
+  color: #cbd5e1;
+}
+
+.book-card-body {
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+.book-title {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--dark-text);
   margin-bottom: 4px;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+  height: 38px;
 }
-.deal-author {
-  font-size: 13px;
-  color: var(--text-muted);
-  margin-bottom: 12px;
-}
-.price-area {
-  margin-top: auto;
-  padding-top: 12px;
-  border-top: 1px dashed var(--border);
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-end;
-}
-.current-price {
-  font-size: 26px;
-  font-weight: 800;
-  color: #047857;
-}
-.reg-price {
-  font-size: 14px;
-  color: var(--text-muted);
-  text-decoration: line-through;
-}
-.stock-pill {
+.book-author {
   font-size: 12px;
-  font-weight: 600;
-  padding: 3px 8px;
-  border-radius: 6px;
-  display: inline-block;
+  color: var(--muted-text);
+  margin-bottom: 8px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.book-rating {
+  font-size: 11px;
+  color: #f59e0b;
+  margin-bottom: 6px;
+}
+.book-pricing {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-top: auto;
   margin-bottom: 10px;
 }
-.in-stock { background: #dcfce7; color: #15803d; }
-.out-of-stock { background: #fee2e2; color: #b91c1c; }
+.price-current {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--wafi-green);
+}
+.price-regular {
+  font-size: 13px;
+  color: var(--muted-text);
+  text-decoration: line-through;
+}
 
-.buy-btn {
-  display: block;
-  text-align: center;
-  background: var(--primary);
-  color: white;
-  padding: 10px;
-  border-radius: 8px;
-  text-decoration: none;
+.card-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.btn-compare {
+  background: var(--wafi-green-light);
+  color: var(--wafi-green-dark);
+  border: 1px solid rgba(0,128,96,0.3);
+  padding: 7px 10px;
+  border-radius: 6px;
+  font-size: 12px;
   font-weight: 600;
-  font-size: 14px;
-  margin-top: 12px;
-  transition: opacity 0.2s;
+  text-align: center;
+  cursor: pointer;
+  transition: background 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
 }
-.buy-btn:hover { opacity: 0.9; }
-
-/* Table View */
-.table-section { margin-top: 40px; }
-.table-card {
-  background: white;
-  border-radius: 14px;
-  overflow: hidden;
+.btn-compare:hover {
+  background: var(--wafi-green);
+  color: #ffffff;
+}
+.btn-cod {
+  background: #f1f5f9;
+  color: var(--dark-text);
   border: 1px solid var(--border);
-  box-shadow: 0 4px 6px rgba(0,0,0,0.02);
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  text-align: center;
+  cursor: pointer;
 }
-table {
+.btn-cod:hover {
+  background: #e2e8f0;
+}
+
+/* 8. SEARCH RESULTS VIEW (When query active) */
+.search-results-section {
+  max-width: 1240px;
+  margin: 20px auto;
+  padding: 0 16px;
+}
+.results-header-banner {
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px 20px;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+/* 9. ON-CLICK COMPARISON MODAL POPUP */
+.modal-overlay {
+  display: none;
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(4px);
+  z-index: 1000;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+.modal-overlay.active {
+  display: flex;
+}
+.modal-card {
+  background: #ffffff;
+  border-radius: 16px;
   width: 100%;
-  border-collapse: collapse;
-  text-align: left;
+  max-width: 720px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: var(--shadow-lg);
+  animation: modalSlideUp 0.25s ease-out;
+  position: relative;
 }
-th {
+@keyframes modalSlideUp {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+.modal-close-btn {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  background: #f1f5f9;
+  border: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+}
+.modal-close-btn:hover { background: #e2e8f0; }
+
+.modal-book-header {
+  padding: 20px 24px;
   background: #f8fafc;
-  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+.modal-book-thumb {
+  width: 80px;
+  height: 105px;
+  background: #e2e8f0;
+  border-radius: 6px;
+  overflow: hidden;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.modal-book-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.modal-book-info h3 {
+  font-size: 18px;
+  color: var(--dark-text);
+  margin-bottom: 4px;
+}
+.modal-book-info p {
+  font-size: 13px;
+  color: var(--muted-text);
+  margin-bottom: 2px;
+}
+
+.modal-top3-section {
+  padding: 20px 24px;
+}
+.modal-top3-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #166534;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.top3-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.top3-deal-item {
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  transition: all 0.2s;
+}
+.top3-deal-item.rank-1 {
+  background: #f0fdf4;
+  border-color: #86efac;
+  box-shadow: 0 2px 8px rgba(34,197,94,0.15);
+}
+.deal-store-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.deal-rank-badge {
+  font-size: 20px;
+}
+.deal-store-name {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--dark-text);
+}
+.deal-store-tag {
+  font-size: 11px;
+  padding: 2px 6px;
+  background: #e2e8f0;
+  border-radius: 4px;
+  color: var(--muted-text);
+}
+.deal-pricing-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.deal-prices {
+  text-align: right;
+}
+.deal-current-price {
+  font-size: 18px;
+  font-weight: 700;
+  color: #166534;
+}
+.deal-savings {
+  font-size: 11px;
+  color: #dc2626;
+  font-weight: 600;
+}
+.deal-btns {
+  display: flex;
+  gap: 6px;
+}
+.btn-modal-order {
+  background: var(--wafi-green);
+  color: #ffffff;
+  padding: 6px 14px;
+  border-radius: 6px;
   font-size: 13px;
   font-weight: 600;
-  color: var(--text-muted);
-  border-bottom: 1px solid var(--border);
+  border: none;
+  cursor: pointer;
 }
-td {
-  padding: 14px 16px;
-  border-bottom: 1px solid var(--border);
-  font-size: 14px;
-  vertical-align: middle;
+.btn-modal-order:hover { background: var(--wafi-green-dark); }
+.btn-modal-link {
+  background: #f1f5f9;
+  color: var(--dark-text);
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  border: 1px solid var(--border);
 }
-tr:hover td { background: #fdfefe; }
-.table-link {
-  color: var(--primary);
-  text-decoration: none;
+
+.modal-all-stores {
+  padding: 0 24px 20px;
+}
+.all-stores-toggle {
+  background: #f8fafc;
+  border: 1px solid var(--border);
+  width: 100%;
+  padding: 8px;
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 13px;
   font-weight: 600;
-}
-.table-link:hover { text-decoration: underline; }
-
-.empty-state {
+  color: var(--muted-text);
+  cursor: pointer;
   text-align: center;
-  padding: 60px 20px;
-  color: var(--text-muted);
 }
-.empty-icon { font-size: 48px; margin-bottom: 10px; }
 
-@media (max-width: 600px) {
-  .search-form { flex-direction: column; }
-  .search-btn { padding: 12px; }
-  table { display: block; overflow-x: auto; }
+/* COD ORDER FORM MODAL */
+.cod-form-wrap {
+  padding: 20px 24px;
+  background: #f8fafc;
+  border-top: 1px solid var(--border);
+}
+.cod-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 10px;
+}
+.form-input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 13px;
+}
+.btn-submit-order {
+  grid-column: 1 / -1;
+  background: #166534;
+  color: white;
+  border: none;
+  padding: 10px;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+/* 10. FOOTER */
+.site-footer {
+  background: #0f172a;
+  color: #94a3b8;
+  padding: 40px 0 20px;
+  margin-top: 40px;
+  font-size: 13px;
+}
+.footer-inner {
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 0 16px;
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1.5fr;
+  gap: 30px;
+}
+.footer-col h4 {
+  color: #ffffff;
+  font-size: 15px;
+  margin-bottom: 12px;
+}
+.footer-col ul { list-style: none; }
+.footer-col li { margin-bottom: 8px; }
+.footer-col a:hover { color: #ffffff; }
+.footer-bottom {
+  max-width: 1240px;
+  margin: 30px auto 0;
+  padding: 16px 16px 0;
+  border-top: 1px solid #1e293b;
+  text-align: center;
+  font-size: 12px;
+}
+
+/* RESPONSIVE */
+@media (max-width: 768px) {
+  .header-inner { flex-direction: column; align-items: stretch; }
+  .mega-search-form { max-width: 100%; }
+  .header-actions { justify-content: space-around; }
+  .hero-banner { padding: 20px; }
+  .hero-title { font-size: 20px; }
+  .footer-inner { grid-template-columns: 1fr; }
+  .cod-form-grid { grid-template-columns: 1fr; }
 }
 </style>
 </head>
 <body>
 
-<header>
-  <div class="header-badge">🇧🇩 ২১টি জনপ্রিয় অনলাইন বুকশপ ও প্রকাশনীতে লাইভ দাম পরীক্ষা</div>
-  <h1>বইয়ের লাইভ দাম তুলনা</h1>
-  <p class="subtitle">Rokomari, Wafilife, Guardian Publications, Oitijjhya, AnyaProkash, Anindya, PBS, Baatighar, Prothoma, Adarsha, Ruhama, AladaBoi, BDBooks, Kitabghor, Maktabatul Ashraf, BoiBitan, Bengal Publications সহ ২১টি শপ থেকে একই সাথে লাইভ দাম ও স্টক চেক করুন।</p>
-  <div style="margin-top: 18px;">
-    <a href="/salesman" style="display: inline-flex; align-items: center; gap: 8px; background: rgba(255, 255, 255, 0.2); color: white; padding: 10px 22px; border-radius: 999px; text-decoration: none; font-weight: 600; font-size: 15px; backdrop-filter: blur(8px); border: 1px solid rgba(255, 255, 255, 0.35); box-shadow: 0 4px 12px rgba(0,0,0,0.15); transition: all 0.2s;">
-      🤖 বইবন্ধু AI সেলসম্যান-এর সাথে কথা বলুন ↗
+<!-- 1. TOP ANNOUNCEMENT BAR -->
+<div class="top-bar">
+  <div class="top-bar-inner">
+    <div class="top-left">
+      <span>📞 হেল্পলাইন: ০৯৬৩৮-০০১১২২</span>
+      <span>🚚 সারাদেশে ক্যাশ অন ডেলিভারি</span>
+      <span>⚡ ২১টি বুকশপের মধ্যে সর্বনিম্ন দামের নিশ্চয়তা!</span>
+    </div>
+    <div class="top-right">
+      <a href="/demo">🤖 AI সেলসম্যান ডেমো</a>
+      <a href="/merchant">🏪 মার্চেন্ট পোর্টাল</a>
+      <a href="/admin/analytics">📈 অ্যানালিটিক্স</a>
+    </div>
+  </div>
+</div>
+
+<!-- 2. MAIN HEADER -->
+<header class="main-header">
+  <div class="header-inner">
+    <a href="/" class="logo">
+      <span class="logo-icon">📚</span>
+      <div class="logo-text">
+        <span class="brand-name">বইবন্ধু<span class="brand-domain">.com</span></span>
+        <span class="brand-tag">বাংলাদেশের বৃহত্তম বইয়ের মার্কেটপ্লেস</span>
+      </div>
     </a>
-    <a href="/merchant" style="display: inline-flex; align-items: center; gap: 8px; background: #059669; color: white; padding: 10px 20px; border-radius: 999px; text-decoration: none; font-weight: 600; font-size: 15px; box-shadow: 0 4px 12px rgba(5,150,105,0.3); transition: all 0.2s; margin-left: 8px;">
-      💼 বুকশপ B2B SaaS পোর্টাল ↗
-    </a>
-    <a href="/demo" style="display: inline-flex; align-items: center; gap: 8px; background: #2563eb; color: white; padding: 10px 20px; border-radius: 999px; text-decoration: none; font-weight: 600; font-size: 15px; box-shadow: 0 4px 12px rgba(37,99,235,0.3); transition: all 0.2s; margin-left: 8px;">
-      🎯 লাইভ স্টোর সুইচার ডেমো ↗
-    </a>
+
+    <form action="/" method="GET" class="mega-search-form" id="searchForm">
+      <select name="category" class="search-category-select">
+        <option value="all">সকল বিষয়</option>
+        <option value="islamic" {% if category == 'islamic' %}selected{% endif %}>ইসলামিক বই</option>
+        <option value="general" {% if category == 'general' %}selected{% endif %}>উপন্যাস ও সাহিত্য</option>
+      </select>
+      <div class="search-input-wrap">
+        <input type="text" name="q" id="searchInput" class="search-input" value="{{ query }}" placeholder="বইয়ের নাম, লেখক বা প্রকাশনী দিয়ে খুঁজুন (Banglish ও বাংলা)..." autocomplete="off">
+        <button type="submit" class="search-btn">
+          <span>🔍</span> <span>খুঁজুন</span>
+        </button>
+      </div>
+    </form>
+
+    <div class="header-actions">
+      <a href="#" class="header-action-btn" onclick="alert('আপনার মোবাইল নম্বর দিয়ে সহজেই যে কোনো অর্ডার ট্র্যাক করতে পারবেন'); return false;">
+        <span class="icon">📦</span>
+        <span class="label">অর্ডার ট্র্যাক</span>
+      </a>
+      <a href="#" class="header-action-btn" onclick="alert('আপনার পছন্দের বই সংরক্ষিত রয়েছে'); return false;">
+        <span class="icon">❤️</span>
+        <span class="label">উইশলিস্ট</span>
+      </a>
+      <a href="#" class="header-action-btn cart-btn" onclick="alert('কার্টে বই যুক্ত করতে বইয়ের পাশে থাকা অর্ডার বাটনে চাপুন'); return false;">
+        <span class="icon">🛒</span>
+        <span class="label">কার্ট <span class="badge" id="cartCount">০</span></span>
+      </a>
+    </div>
   </div>
 </header>
 
-<div class="container">
-  <div class="search-box">
-    <form class="search-form" method="GET" action="/">
-      <input type="text" name="q" class="search-input" placeholder="বইয়ের নাম লিখুন (যেমন: বেলা ফুরাবার আগে, প্যারাডক্সিক্যাল সাজিদ, সীরাত, অপেক্ষা...)" value="{{ query }}" required>
-      <input type="hidden" name="category" value="{{ category }}">
-      <button type="submit" class="search-btn">🔍 দাম খুঁজুন</button>
-    </form>
-    
-    <div class="filters">
-      <span class="filter-label">ফিল্টার:</span>
-      <a href="/?q={{ query }}&category=all" class="filter-btn {{ 'active' if category == 'all' else '' }}">সব শপ ও প্রকাশনী (২১টি)</a>
-      <a href="/?q={{ query }}&category=islamic" class="filter-btn {{ 'active' if category == 'islamic' else '' }}">🕌 ইসলামিক ও প্রকাশনী (৮টি)</a>
-      <a href="/?q={{ query }}&category=general" class="filter-btn {{ 'active' if category == 'general' else '' }}">📚 জেনারেল, সাহিত্য ও প্রকাশনী (১৩টি)</a>
-    </div>
+<!-- 3. SUB NAVIGATION BAR -->
+<nav class="sub-nav">
+  <div class="sub-nav-inner">
+    <a href="/?category=all" class="nav-item active">📂 বিষয়সমূহ</a>
+    <a href="/?q=হুমায়ূন আহমেদ" class="nav-item">✍️ হুমায়ূন আহমেদ</a>
+    <a href="/?q=আরিফ আজাদ" class="nav-item">✍️ আরিফ আজাদ</a>
+    <a href="/?category=islamic" class="nav-item">🕌 ইসলামিক বই</a>
+    <a href="/?category=general" class="nav-item">📖 কথাসাহিত্য ও উপন্যাস</a>
+    <a href="/?q=আত্মউন্নয়ন" class="nav-item">🎯 আত্মউন্নয়ন</a>
+    <a href="/?q=প্রোগ্রামিং" class="nav-item">💻 প্রোগ্রামিং ও ক্যারিয়ার</a>
+    <a href="/?q=অফার" class="nav-item">🏷️ বিশেষ ছাড়</a>
+    <a href="/?q=বেস্টসেলার" class="nav-item">🏆 বেস্টসেলার</a>
+  </div>
+</nav>
 
-    <div class="tags">
-      <span class="filter-label">পপুলার বই:</span>
-      <a href="/?q=বেলা ফুরাবার আগে&category={{ category }}" class="tag-item">বেলা ফুরাবার আগে</a>
-      <a href="/?q=প্যারাডক্সিক্যাল সাজিদ&category={{ category }}" class="tag-item">প্যারাডক্সিক্যাল সাজিদ</a>
-      <a href="/?q=রি-থিংক&category={{ category }}" class="tag-item">রি-থিংক</a>
-      <a href="/?q=অপেক্ষা&category={{ category }}" class="tag-item">অপেক্ষা</a>
-      <a href="/?q=সীরাত&category={{ category }}" class="tag-item">সীরাত</a>
+{% if not query %}
+<!-- 4. HERO SECTION (Wafilife Banner) -->
+<section class="hero-section">
+  <div class="hero-banner">
+    <div class="hero-content">
+      <span class="hero-pill">⚡ ২১টি বুকশপের বই এক ছাদের নিচে</span>
+      <h1 class="hero-title">রকমারি, ওয়াফিলাইফ, বাতিঘর সহ সকল বুকশপের সেরা দাম এক ক্লিকেই!</h1>
+      <p class="hero-subtitle">বাংলাদেশের যেকোনো বই খুঁজুন—আমরা ২১টি অনলাইন বুকশপে তাৎক্ষণিক দাম তুলনা করে আপনাকে সবচেয়ে কম দামে কেনার সুযোগ করে দেব।</p>
+      <div class="hero-btns">
+        <a href="#bestsellers" class="hero-btn-primary">🔥 বেস্টসেলার বইগুলো দেখুন</a>
+        <a href="/?category=islamic" class="hero-btn-secondary">🕌 ইসলামিক বই সম্ভার</a>
+      </div>
     </div>
   </div>
+</section>
 
-  {% if query %}
-    {% if total_found > 0 %}
-      <!-- TOP 5 LOWEST PRICES -->
-      <section class="top-section">
-        <h2 class="section-title">🏆 স্টকে থাকা সেরা ৫টি কম দাম (Top 5 Lowest Prices)</h2>
-        <div class="top-grid">
-          {% for deal in top_5 %}
-            <div class="deal-card rank-{{ deal.rank }}">
-              <div class="rank-badge">{{ deal.badge }}</div>
-              <div class="deal-header">
-                <div>
-                  <span class="store-tag">{{ deal.store }}</span>
-                  <span class="store-type">• {{ deal.store_type }}</span>
-                </div>
-                <span class="stock-pill {{ 'in-stock' if deal.in_stock else 'out-of-stock' }}">
-                  {{ deal.stock_text }}
-                </span>
-              </div>
-
-              <!-- BOOK PROFILE: COVER IMG + WRITER + PUBLICATION + TOPIC -->
-              <div style="display:flex; gap:12px; margin-bottom:12px; align-items:flex-start;">
-                {% if deal.image %}
-                  <img src="{{ deal.image }}" alt="{{ deal.title }}" style="width:64px; height:92px; object-fit:cover; border-radius:6px; box-shadow:0 3px 8px rgba(0,0,0,0.12); flex-shrink:0;" onerror="this.style.display='none'">
-                {% else %}
-                  <div style="width:64px; height:92px; background:#eff6ff; color:#1d4ed8; border-radius:6px; display:flex; align-items:center; justify-content:center; font-size:28px; flex-shrink:0;">📖</div>
-                {% endif %}
-                <div style="flex:1; min-width:0;">
-                  <div class="deal-title" title="{{ deal.title }}">{{ deal.title }}</div>
-                  {% if deal.author %}<div class="deal-author" style="margin-bottom:3px;">👤 <strong>লেখক:</strong> {{ deal.author }}</div>{% endif %}
-                  {% if deal.publisher %}<div style="font-size:12px; color:var(--text-muted); margin-bottom:3px;">🏢 <strong>প্রকাশনী:</strong> {{ deal.publisher }}</div>{% endif %}
-                  {% if deal.subject %}<div style="font-size:11px; color:#2563eb; background:#eff6ff; display:inline-block; padding:1px 8px; border-radius:4px; margin-top:2px;">🏷️ {{ deal.subject }}</div>{% endif %}
-                </div>
-              </div>
-
-              <div class="price-area">
-                <div>
-                  {% if deal.regular_price and deal.regular_price > deal.price %}
-                    <div class="reg-price">৳{{ deal.regular_price }}</div>
-                  {% endif %}
-                  <div class="current-price">৳{{ deal.price if deal.price else 'তথ্য নেই' }}</div>
-                </div>
-                <a href="{{ deal.url }}" target="_blank" rel="noopener noreferrer" class="buy-btn">ওয়েবসাইটে যান ↗</a>
-              </div>
-            </div>
-          {% endfor %}
-        </div>
-      </section>
-
-      <!-- ALL STORES FULL LIST: CARD GRID VIEW (MATCHING TOP 5) & TABLE VIEW TOGGLE -->
-      <section class="table-section">
-        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:18px;">
-          <h2 class="section-title" style="margin-bottom:0;">📊 সব বুকশপের পূর্ণাঙ্গ তালিকা ({{ total_found }}টি অপশন পাওয়া গেছে)</h2>
-          <div style="display:flex; gap:6px; background:#e2e8f0; padding:3px; border-radius:8px;">
-            <button id="btnGridView" onclick="switchFullListView('grid')" style="padding:6px 14px; border:none; border-radius:6px; font-size:13px; font-weight:700; cursor:pointer; background:#ffffff; color:#1e1b4b; box-shadow:0 1px 3px rgba(0,0,0,0.1);">🎴 কার্ড ভিউ (Grid)</button>
-            <button id="btnTableView" onclick="switchFullListView('table')" style="padding:6px 14px; border:none; border-radius:6px; font-size:13px; font-weight:600; cursor:pointer; background:transparent; color:#64748b;">📋 টেবিল ভিউ (Table)</button>
-          </div>
-        </div>
-
-        <!-- 1. FULL LIST CARD GRID VIEW (IDENTICAL TO TOP 5 CARDS) -->
-        <div id="allCardsView" class="top-grid">
-          {% for item in all_results %}
-            <div class="deal-card all-card {{ 'is-in-stock' if item.in_stock else 'is-out-of-stock' }}">
-              <div class="rank-badge">#{{ loop.index }}</div>
-              <div class="deal-header">
-                <div>
-                  <span class="store-tag">{{ item.store }}</span>
-                  <span class="store-type">• {{ item.store_type }}</span>
-                </div>
-                <span class="stock-pill {{ 'in-stock' if item.in_stock else 'out-of-stock' }}">
-                  {{ item.stock_text }}
-                </span>
-              </div>
-
-              <!-- BOOK PROFILE: COVER IMG + WRITER + PUBLICATION + TOPIC -->
-              <div style="display:flex; gap:12px; margin-bottom:12px; align-items:flex-start;">
-                {% if item.image %}
-                  <img src="{{ item.image }}" alt="{{ item.title }}" style="width:64px; height:92px; object-fit:cover; border-radius:6px; box-shadow:0 3px 8px rgba(0,0,0,0.12); flex-shrink:0;" onerror="this.style.display='none'">
-                {% else %}
-                  <div style="width:64px; height:92px; background:#eff6ff; color:#1d4ed8; border-radius:6px; display:flex; align-items:center; justify-content:center; font-size:28px; flex-shrink:0;">📖</div>
-                {% endif %}
-                <div style="flex:1; min-width:0;">
-                  <div class="deal-title" title="{{ item.title }}">{{ item.title }}</div>
-                  {% if item.author %}<div class="deal-author" style="margin-bottom:3px;">👤 <strong>লেখক:</strong> {{ item.author }}</div>{% endif %}
-                  {% if item.publisher %}<div style="font-size:12px; color:var(--text-muted); margin-bottom:3px;">🏢 <strong>প্রকাশনী:</strong> {{ item.publisher }}</div>{% endif %}
-                  {% if item.subject %}<div style="font-size:11px; color:#2563eb; background:#eff6ff; display:inline-block; padding:1px 8px; border-radius:4px; margin-top:2px;">🏷️ {{ item.subject }}</div>{% endif %}
-                </div>
-              </div>
-
-              <div class="price-area">
-                <div>
-                  {% if item.regular_price and item.regular_price > item.price %}
-                    <div class="reg-price">৳{{ item.regular_price }}</div>
-                  {% endif %}
-                  <div class="current-price">৳{{ item.price if item.price else 'তথ্য নেই' }}</div>
-                </div>
-                <div style="display:flex; gap:6px;">
-                  {% if item.url %}
-                    <a href="{{ item.url }}" target="_blank" rel="noopener noreferrer" class="buy-btn">ওয়েবসাইটে যান ↗</a>
-                  {% endif %}
-                  <button type="button" class="buy-btn bb-order-trigger-btn" style="background:#059669; border:none; cursor:pointer;" data-book="{{ item.title | urlencode }}" data-price="{{ item.price or 0 }}" data-author="{{ item.author or item.store | urlencode }}">🛒 COD</button>
-                </div>
-              </div>
-            </div>
-          {% endfor %}
-        </div>
-
-        <!-- 2. FULL LIST SPREADSHEET TABLE VIEW (TOGGLEABLE) -->
-        <div id="allTableView" class="table-card" style="display:none; margin-top:16px;">
-          <table>
-            <thead>
-              <tr>
-                <th style="width:65px;">ছবি</th>
-                <th>বুকশপ ও প্রকাশনী</th>
-                <th>বইয়ের নাম, লেখক ও বিষয়</th>
-                <th>দাম</th>
-                <th>স্টক স্ট্যাটাস</th>
-                <th>অ্যাকশন</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for item in all_results %}
-                <tr>
-                  <td>
-                    {% if item.image %}
-                      <img src="{{ item.image }}" alt="{{ item.title }}" style="width:48px; height:68px; object-fit:cover; border-radius:4px; box-shadow:0 2px 5px rgba(0,0,0,0.1);" onerror="this.style.display='none'">
-                    {% else %}
-                      <div style="width:48px; height:68px; background:#f1f5f9; border-radius:4px; display:flex; align-items:center; justify-content:center; font-size:20px;">📖</div>
-                    {% endif %}
-                  </td>
-                  <td>
-                    <strong>{{ item.store }}</strong><br>
-                    {% if item.publisher %}<span style="font-size:12px; color:#475569;">🏢 {{ item.publisher }}</span><br>{% endif %}
-                    <small style="color:var(--text-muted)">{{ item.store_type }}</small>
-                  </td>
-                  <td>
-                    <strong>{{ item.title }}</strong>
-                    {% if item.author %}<br><small style="color:var(--text-muted)">👤 লেখক: {{ item.author }}</small>{% endif %}
-                    {% if item.subject %}<br><span style="font-size:11px; color:#2563eb; background:#eff6ff; padding:1px 6px; border-radius:3px; display:inline-block; margin-top:3px;">🏷️ {{ item.subject }}</span>{% endif %}
-                  </td>
-                  <td>
-                    <strong style="color: #047857; font-size: 16px;">৳{{ item.price if item.price else 'N/A' }}</strong>
-                    {% if item.regular_price and item.regular_price > item.price %}
-                      <br><small style="text-decoration:line-through; color:var(--text-muted)">৳{{ item.regular_price }}</small>
-                    {% endif %}
-                  </td>
-                  <td>
-                    <span class="stock-pill {{ 'in-stock' if item.in_stock else 'out-of-stock' }}">
-                      {{ item.stock_text }}
-                    </span>
-                  </td>
-                  <td>
-                    <a href="{{ item.url }}" target="_blank" rel="noopener noreferrer" class="table-link">কিনুন ↗</a>
-                  </td>
-                </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
-
-        <script>
-        function switchFullListView(view) {
-          var cards = document.getElementById('allCardsView');
-          var table = document.getElementById('allTableView');
-          var btnGrid = document.getElementById('btnGridView');
-          var btnTable = document.getElementById('btnTableView');
-          if (view === 'grid') {
-            cards.style.display = 'grid';
-            table.style.display = 'none';
-            btnGrid.style.background = '#ffffff';
-            btnGrid.style.color = '#1e1b4b';
-            btnGrid.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1)';
-            btnTable.style.background = 'transparent';
-            btnTable.style.color = '#64748b';
-            btnTable.style.boxShadow = 'none';
-          } else {
-            cards.style.display = 'none';
-            table.style.display = 'block';
-            btnTable.style.background = '#ffffff';
-            btnTable.style.color = '#1e1b4b';
-            btnTable.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1)';
-            btnGrid.style.background = 'transparent';
-            btnGrid.style.color = '#64748b';
-            btnGrid.style.boxShadow = 'none';
-          }
-        }
-        </script>
-      </section>
-    {% else %}
-      <div class="empty-state">
-        <div class="empty-icon">🔍</div>
-        <h3>“{{ query }}” এর জন্য কোনো ফলাফল পাওয়া যায়নি</h3>
-        <p>বইয়ের সঠিক নাম লিখে পুনরায় চেষ্টা করুন।</p>
-      </div>
-    {% endif %}
-  {% else %}
-    <div class="empty-state">
-      <div class="empty-icon">📖</div>
-      <h3>যে কোনো বইয়ের নাম লিখে সার্চ করুন</h3>
-      <p>আমরা ১৭টি অনলাইন বুকশপ থেকে সরাসরি রিয়েল-টাইম স্ক্র্যাপ করে সবচেয়ে কম দাম খুঁজে দেব।</p>
+<!-- 5. BENEFITS BAR -->
+<div class="benefits-bar">
+  <div class="benefit-item">
+    <span class="benefit-icon">⚡</span>
+    <div>
+      <div class="benefit-title">সর্বনিম্ন দামের নিশ্চয়তা</div>
+      <div class="benefit-desc">২১টি বুকশপে রিয়েল-টাইম তুলনা</div>
     </div>
-  {% endif %}
+  </div>
+  <div class="benefit-item">
+    <span class="benefit-icon">🚚</span>
+    <div>
+      <div class="benefit-title">ক্যাশ অন ডেলিভারি</div>
+      <div class="benefit-desc">সারা দেশে ঘরে বসে মূল্য পরিশোধ</div>
+    </div>
+  </div>
+  <div class="benefit-item">
+    <span class="benefit-icon">💯</span>
+    <div>
+      <div class="benefit-title">১০০% আসল বই</div>
+      <div class="benefit-desc">সরাসরি অনুমোদিত প্রকাশনী থেকে</div>
+    </div>
+  </div>
+  <div class="benefit-item">
+    <span class="benefit-icon">🤖</span>
+    <div>
+      <div class="benefit-title">বইবন্ধু AI গাইড</div>
+      <div class="benefit-desc">চাহিদা অনুযায়ী সেরা বইয়ের পরামর্শ</div>
+    </div>
+  </div>
 </div>
 
+<!-- 6. CATEGORY QUICK PILLS -->
+<div class="category-pills">
+  <a href="/" class="cat-pill active">সকল বই</a>
+  <a href="/?category=islamic" class="cat-pill">🕌 ইসলামিক বই</a>
+  <a href="/?q=উপন্যাস" class="cat-pill">📖 উপন্যাস ও গল্প</a>
+  <a href="/?q=আত্মউন্নয়ন" class="cat-pill">🎯 মোটিভেশন ও আত্মউন্নয়ন</a>
+  <a href="/?q=প্রোগ্রামিং" class="cat-pill">💻 কোডিং ও সফটওয়্যার</a>
+  <a href="/?q=থ্রিলার" class="cat-pill">🔍 থ্রিলার ও গোয়েন্দা</a>
+  <a href="/?q=শিশু-কিশোর" class="cat-pill">👶 শিশু-কিশোর সাহিত্য</a>
+</div>
+
+<!-- 7. CURATED SHELVES (Loaded from 269k+ database) -->
+{% for shelf in shelves %}
+<section class="shelf-section" id="{{ shelf.id }}">
+  <div class="shelf-header">
+    <div>
+      <h2 class="shelf-title">{{ shelf.title }}</h2>
+      <p style="font-size:12px; color:var(--muted-text); margin-top:2px;">{{ shelf.subtitle }}</p>
+    </div>
+    <a href="/?q={{ shelf.title.split()[1] if shelf.title.split()|length > 1 else 'বই' }}" class="shelf-link">সবগুলো দেখুন →</a>
+  </div>
+
+  <div class="books-grid">
+    {% for b in shelf.books %}
+    <div class="book-card" onclick="openCompareModal('{{ b.title }}')">
+      <span class="card-badge">-{{ b.discount_pct }}% ছাড়</span>
+      <div class="book-card-cover">
+        <span class="book-cover-placeholder">📖</span>
+      </div>
+      <div class="book-card-body">
+        <h3 class="book-title" title="{{ b.title }}">{{ b.title }}</h3>
+        <p class="book-author">👤 {{ b.author }}</p>
+        <div class="book-rating">⭐⭐⭐⭐⭐ (৪.৯)</div>
+        <div class="book-pricing">
+          <span class="price-current">৳{{ b.price }}</span>
+          <span class="price-regular">৳{{ b.regular_price }}</span>
+        </div>
+        <div class="card-actions">
+          <button class="btn-compare" onclick="event.stopPropagation(); openCompareModal('{{ b.title }}');">
+            <span>⚡</span> সর্বনিম্ন দাম (Top 3)
+          </button>
+          <button class="btn-cod" onclick="event.stopPropagation(); openCodModal('{{ b.title }}', '{{ b.price }}', 'সেরা বুকশপ');">
+            🛒 অর্ডার করুন (COD)
+          </button>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+{% endfor %}
+
+{% else %}
+<!-- 8. SEARCH RESULTS VIEW -->
+<section class="search-results-section">
+  <div class="results-header-banner">
+    <div>
+      <h2 style="font-size:20px; font-weight:700;">'{{ query }}' এর জন্য সেরা অফারসমূহ</h2>
+      <p style="font-size:13px; color:var(--muted-text);">আমাদের ২১টি বুকশপের মধ্যে মোট <strong>{{ total_found }}টি</strong> অপশন পাওয়া গেছে।</p>
+    </div>
+    <a href="/" class="btn-compare" style="padding:8px 16px;">← বুকস্টোর হোমে ফিরে যান</a>
+  </div>
+
+  {% if top_5 %}
+  <div style="margin-bottom:24px;">
+    <h3 style="font-size:17px; font-weight:700; margin-bottom:12px; color:#166534;">🏆 স্টকে থাকা সেরা কম দাম (Top Deals)</h3>
+    <div class="books-grid">
+      {% for item in top_5 %}
+      <div class="book-card" onclick="openCompareModal('{{ item.title }}')">
+        <span class="card-badge" style="background:#166534;">{{ item.badge }}</span>
+        <div class="book-card-cover">
+          {% if item.image %}
+          <img src="{{ item.image }}" alt="{{ item.title }}" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+          <span class="book-cover-placeholder" style="display:none;">📖</span>
+          {% else %}
+          <span class="book-cover-placeholder">📖</span>
+          {% endif %}
+        </div>
+        <div class="book-card-body">
+          <h3 class="book-title">{{ item.title }}</h3>
+          <p class="book-author">🏪 {{ item.store }} | 👤 {{ item.author or 'অজ্ঞাত' }}</p>
+          <div class="book-pricing">
+            <span class="price-current">৳{{ item.price }}</span>
+            {% if item.regular_price and item.regular_price > item.price %}
+            <span class="price-regular">৳{{ item.regular_price }}</span>
+            {% endif %}
+          </div>
+          <div class="card-actions">
+            <button class="btn-compare" onclick="event.stopPropagation(); openCompareModal('{{ item.title }}');">
+              <span>⚡</span> দাম তুলনা (Top 3)
+            </button>
+            <button class="btn-cod" onclick="event.stopPropagation(); openCodModal('{{ item.title }}', '{{ item.price }}', '{{ item.store }}');">
+              🛒 অর্ডার করুন (COD)
+            </button>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  {% if all_results %}
+  <div>
+    <h3 style="font-size:17px; font-weight:700; margin-bottom:12px;">📊 সব বুকশপের পূর্ণাঙ্গ তালিকা ({{ all_results|length }}টি অপশন)</h3>
+    <div class="books-grid">
+      {% for item in all_results %}
+      <div class="book-card" onclick="openCompareModal('{{ item.title }}')">
+        <div class="book-card-cover">
+          <span class="book-cover-placeholder">📖</span>
+        </div>
+        <div class="book-card-body">
+          <h3 class="book-title">{{ item.title }}</h3>
+          <p class="book-author">🏪 {{ item.store }}</p>
+          <div class="book-pricing">
+            <span class="price-current">৳{{ item.price }}</span>
+          </div>
+          <div class="card-actions">
+            <button class="btn-compare" onclick="event.stopPropagation(); openCompareModal('{{ item.title }}');">
+              <span>⚡</span> যাচাই করুন
+            </button>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+</section>
+{% endif %}
+
+<!-- 9. ON-CLICK COMPARISON MODAL POPUP (Top 3 Lowest Price Stores) -->
+<div id="compareModal" class="modal-overlay" onclick="closeCompareModal(event)">
+  <div class="modal-card" onclick="event.stopPropagation();">
+    <button class="modal-close-btn" onclick="closeCompareModal()">✕</button>
+    
+    <div class="modal-book-header">
+      <div class="modal-book-thumb" id="modalThumb">
+        <span style="font-size:36px;">📖</span>
+      </div>
+      <div class="modal-book-info">
+        <h3 id="modalBookTitle">বইয়ের নাম লোড হচ্ছে...</h3>
+        <p id="modalBookAuthor">👤 লেখক: ...</p>
+        <p id="modalBookPublisher">🏢 প্রকাশনী: ...</p>
+      </div>
+    </div>
+
+    <div class="modal-top3-section">
+      <div class="modal-top3-title">
+        <span>🏆 এই বইটি সবচেয়ে কম দামে পাওয়া যাচ্ছে এমন ৩টি ওয়েবসাইট:</span>
+      </div>
+      
+      <div class="top3-cards" id="modalTop3Container">
+        <div style="text-align:center; padding:20px; color:var(--muted-text);">ডাটা লোড হচ্ছে...</div>
+      </div>
+    </div>
+
+    <!-- Collapsible Full Store List -->
+    <div class="modal-all-stores">
+      <button class="all-stores-toggle" onclick="toggleAllStores()">
+        <span>▼ অন্যান্য বুকশপের তালিকা ও দাম দেখুন</span>
+      </button>
+      <div id="allStoresContent" style="display:none; margin-top:12px;">
+        <table style="width:100%; border-collapse:collapse; font-size:13px;">
+          <thead>
+            <tr style="border-bottom:2px solid var(--border); text-align:left;">
+              <th style="padding:6px;">বুকশপ</th>
+              <th style="padding:6px;">মূল্য</th>
+              <th style="padding:6px;">স্ট্যাটাস</th>
+              <th style="padding:6px; text-align:right;">লিংক</th>
+            </tr>
+          </thead>
+          <tbody id="modalAllStoresBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 10. CASH ON DELIVERY (COD) ORDER MODAL -->
+<div id="codModal" class="modal-overlay" onclick="closeCodModal(event)">
+  <div class="modal-card" style="max-width:480px;" onclick="event.stopPropagation();">
+    <button class="modal-close-btn" onclick="closeCodModal()">✕</button>
+    <div style="padding:20px 24px; border-bottom:1px solid var(--border);">
+      <h3 style="font-size:18px; color:var(--wafi-green-dark);">🛒 ১-ক্লিক ক্যাশ অন ডেলিভারি অর্ডার</h3>
+      <p style="font-size:13px; color:var(--muted-text); margin-top:2px;">ঘরে বসে বই হাতে পেয়ে মূল্য পরিশোধ করুন।</p>
+    </div>
+    <div class="cod-form-wrap">
+      <div style="background:#ffffff; padding:10px 14px; border:1px solid var(--border); border-radius:8px; margin-bottom:12px;">
+        <strong id="codBookTitle" style="color:var(--dark-text); font-size:14px;">বইয়ের নাম</strong>
+        <div style="font-size:13px; color:#166534; font-weight:700; margin-top:2px;">মূল্য: <span id="codBookPrice">৳০</span> (<span id="codBookStore">বুকশপ</span>)</div>
+      </div>
+
+      <form id="codForm" onsubmit="submitCodOrder(event)">
+        <input type="hidden" id="codOrderBook">
+        <input type="hidden" id="codOrderPrice">
+        <input type="hidden" id="codOrderStore">
+        
+        <div class="cod-form-grid">
+          <div>
+            <label style="font-size:12px; font-weight:600;">আপনার নাম *</label>
+            <input type="text" id="custName" class="form-input" required placeholder="পুরো নাম">
+          </div>
+          <div>
+            <label style="font-size:12px; font-weight:600;">মোবাইল নম্বর *</label>
+            <input type="tel" id="custPhone" class="form-input" required placeholder="০১XXXXXXXXX">
+          </div>
+          <div style="grid-column: 1 / -1;">
+            <label style="font-size:12px; font-weight:600;">জেলা / শহর *</label>
+            <input type="text" id="custDistrict" class="form-input" required placeholder="যেমন: ঢাকা / চট্টগ্রাম">
+          </div>
+          <div style="grid-column: 1 / -1;">
+            <label style="font-size:12px; font-weight:600;">সম্পূর্ণ ডেলিভারি ঠিকানা *</label>
+            <textarea id="custAddress" class="form-input" rows="2" required placeholder="বাসা/রোড নম্বর, এলাকা ও পোস্ট কোড"></textarea>
+          </div>
+          <button type="submit" class="btn-submit-order" id="btnSubmitOrder">✅ অর্ডার নিশ্চিত করুন</button>
+        </div>
+      </form>
+      <div id="codSuccessMsg" style="display:none; text-align:center; padding:16px; background:#f0fdf4; border-radius:8px; margin-top:12px;">
+        <div style="font-size:24px;">🎉</div>
+        <strong style="color:#166534;">আপনার অর্ডারটি সফল হয়েছে!</strong>
+        <p style="font-size:12px; color:var(--dark-text); margin-top:4px;">অর্ডার আইডি: <strong id="resOrderId">#</strong>। শীঘ্রই আমাদের প্রতিনিধি কল দিয়ে ডেলিভারি কনফার্ম করবেন।</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 11. FOOTER -->
+<footer class="site-footer">
+  <div class="footer-inner">
+    <div class="footer-col">
+      <div style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">
+        <span style="font-size:24px;">📚</span>
+        <strong style="color:#ffffff; font-size:18px;">বইবন্ধু ডট কম</strong>
+      </div>
+      <p style="margin-bottom:12px;">বাংলাদেশের প্রথম স্মার্ট বুকস্টোর প্ল্যাটফর্ম ও প্রাইজ কম্প্যারিজন ইঞ্জিন। ২১টি শীর্ষ বুকশপের ২,৭০,০০০+ বইয়ের মধ্যে সর্বনিম্ন মূল্যে পছন্দের বইটি খুঁজে নিন।</p>
+      <p>📞 হেল্পলাইন: ০৯৬৩৮-০০১১২২ (সকাল ৯টা - রাত ১০টা)</p>
+    </div>
+    <div class="footer-col">
+      <h4>জনপ্রিয় বিষয়</h4>
+      <ul>
+        <li><a href="/?category=islamic">ইসলামিক বই</a></li>
+        <li><a href="/?q=উপন্যাস">উপন্যাস ও কথাসাহিত্য</a></li>
+        <li><a href="/?q=আত্মউন্নয়ন">আত্মউন্নয়ন ও ক্যারিয়ার</a></li>
+        <li><a href="/?q=প্রোগ্রামিং">বিজ্ঞান ও প্রযুক্তি</a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <h4>বুকশপ পার্টনারস</h4>
+      <ul>
+        <li>রকমারি ডট কম</li>
+        <li>ওয়াফিলাইফ</li>
+        <li>বাতিঘর প্রকাশনী</li>
+        <li>অন্যপ্রকাশ ও প্রথমা</li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <h4>নিরাপদ কেনাকাটা</h4>
+      <p>🔒 সারাদেশে ক্যাশ অন ডেলিভারি (হোম ডেলিভারি) এবং বিকাশের মাধ্যমে ১০০% নিরাপদ কেনাকাটার সুযোগ।</p>
+      <div style="margin-top:14px; display:flex; gap:8px;">
+        <span style="background:rgba(255,255,255,0.1); padding:4px 8px; border-radius:4px;">🚚 Cash on Delivery</span>
+        <span style="background:rgba(255,255,255,0.1); padding:4px 8px; border-radius:4px;">⚡ 24/7 AI Salesman</span>
+      </div>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <p>© 2026 বইবন্ধু (BoiBondhu.com) — সর্বস্বত্ব সংরক্ষিত। একটি স্বয়ংক্রিয় এআই চালিত বুকস্টোর প্ল্যাটফর্ম।</p>
+  </div>
+</footer>
+
+<!-- 12. FLOATING BOI BONDHU AI CHATBOT WIDGET -->
 <script src="/widget.js" async></script>
+
+<script>
+// ON-CLICK PRICE COMPARISON POPUP LOGIC
+async function openCompareModal(bookTitle) {
+  const modal = document.getElementById('compareModal');
+  const modalTitle = document.getElementById('modalBookTitle');
+  const modalAuthor = document.getElementById('modalBookAuthor');
+  const modalPublisher = document.getElementById('modalBookPublisher');
+  const top3Container = document.getElementById('modalTop3Container');
+  const allStoresBody = document.getElementById('modalAllStoresBody');
+
+  modalTitle.textContent = bookTitle;
+  modalAuthor.textContent = 'লোড হচ্ছে...';
+  modalPublisher.textContent = '';
+  top3Container.innerHTML = '<div style="text-align:center; padding:20px; color:var(--muted-text);">২১টি বুকশপে রিয়েলটাইম দাম যাচাই করা হচ্ছে...</div>';
+  modal.classList.add('active');
+
+  try {
+    const res = await fetch('/api/book/compare?title=' + encodeURIComponent(bookTitle));
+    const data = await res.json();
+
+    modalTitle.textContent = data.title;
+    modalAuthor.textContent = '👤 লেখক: ' + data.author;
+    modalPublisher.textContent = '🏢 প্রকাশনী: ' + data.publisher;
+
+    if (data.top_3 && data.top_3.length > 0) {
+      top3Container.innerHTML = data.top_3.map((deal, idx) => `
+        <div class="top3-deal-item ${idx === 0 ? 'rank-1' : ''}">
+          <div class="deal-store-meta">
+            <span class="deal-rank-badge">${deal.badge.split(' ')[0]}</span>
+            <div>
+              <div class="deal-store-name">${deal.store}</div>
+              <span class="deal-store-tag">${deal.store_type}</span>
+            </div>
+          </div>
+          <div class="deal-pricing-actions">
+            <div class="deal-prices">
+              <div class="deal-current-price">৳${deal.price}</div>
+              ${deal.savings > 0 ? `<div class="deal-savings">৳${deal.savings} সাশ্রয়!</div>` : ''}
+            </div>
+            <div class="deal-btns">
+              <button class="btn-modal-order" onclick="openCodModal('${escapeHtml(data.title)}', '${deal.price}', '${escapeHtml(deal.store)}');">
+                অর্ডার (COD)
+              </button>
+              ${deal.url ? `<a href="${deal.url}" target="_blank" rel="noopener noreferrer" class="btn-modal-link">ভিজিট ↗</a>` : ''}
+            </div>
+          </div>
+        </div>
+      `).join('');
+    } else {
+      top3Container.innerHTML = '<div style="text-align:center; padding:20px; color:var(--muted-text);">কোনো দামের রেকর্ড পাওয়া যায়নি।</div>';
+    }
+
+    // Populate all remaining stores
+    if (data.all_stores && data.all_stores.length > 0) {
+      allStoresBody.innerHTML = data.all_stores.map(d => `
+        <tr style="border-bottom:1px solid #f1f5f9;">
+          <td style="padding:8px 6px;"><strong>${d.store}</strong></td>
+          <td style="padding:8px 6px; color:#166534; font-weight:700;">৳${d.price}</td>
+          <td style="padding:8px 6px;"><span style="color:#059669; font-size:11px;">✅ ${d.stock_text}</span></td>
+          <td style="padding:8px 6px; text-align:right;">
+            ${d.url ? `<a href="${d.url}" target="_blank" style="color:var(--wafi-green); font-weight:600;">দেখুন ↗</a>` : '-'}
+          </td>
+        </tr>
+      `).join('');
+    }
+  } catch (err) {
+    top3Container.innerHTML = '<div style="text-align:center; padding:20px; color:red;">তথ্য লোড করতে সমস্যা হয়েছে।</div>';
+  }
+}
+
+function closeCompareModal(event) {
+  if (!event || event.target.id === 'compareModal' || event.target.classList.contains('modal-close-btn')) {
+    document.getElementById('compareModal').classList.remove('active');
+  }
+}
+
+function toggleAllStores() {
+  const content = document.getElementById('allStoresContent');
+  content.style.display = content.style.display === 'none' ? 'block' : 'none';
+}
+
+// COD MODAL LOGIC
+function openCodModal(title, price, store) {
+  closeCompareModal();
+  document.getElementById('codBookTitle').textContent = title;
+  document.getElementById('codBookPrice').textContent = '৳' + price;
+  document.getElementById('codBookStore').textContent = store;
+  document.getElementById('codOrderBook').value = title;
+  document.getElementById('codOrderPrice').value = price;
+  document.getElementById('codOrderStore').value = store;
+  document.getElementById('codSuccessMsg').style.display = 'none';
+  document.getElementById('codForm').style.display = 'block';
+  document.getElementById('codModal').classList.add('active');
+}
+
+function closeCodModal(event) {
+  if (!event || event.target.id === 'codModal' || event.target.classList.contains('modal-close-btn')) {
+    document.getElementById('codModal').classList.remove('active');
+  }
+}
+
+async function submitCodOrder(e) {
+  e.preventDefault();
+  const btn = document.getElementById('btnSubmitOrder');
+  btn.textContent = 'অর্ডার প্রক্রিয়াধীন...';
+  btn.disabled = true;
+
+  const payload = {
+    customer_name: document.getElementById('custName').value.trim(),
+    customer_phone: document.getElementById('custPhone').value.trim(),
+    customer_district: document.getElementById('custDistrict').value.trim(),
+    delivery_address: document.getElementById('custAddress').value.trim(),
+    book_title: document.getElementById('codOrderBook').value,
+    price: parseInt(document.getElementById('codOrderPrice').value) || 0,
+    store: document.getElementById('codOrderStore').value,
+    merchant_id: 'neutral'
+  };
+
+  try {
+    const res = await fetch('/api/salesman/order', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if (data.status === 'ok') {
+      document.getElementById('codForm').style.display = 'none';
+      document.getElementById('resOrderId').textContent = '#' + (data.order_id || 'ORD-1001');
+      document.getElementById('codSuccessMsg').style.display = 'block';
+      const cartBadge = document.getElementById('cartCount');
+      if (cartBadge) cartBadge.textContent = '১';
+    } else {
+      alert('অর্ডার সাবমিট করতে সমস্যা হয়েছে: ' + (data.message || 'আবার চেষ্টা করুন'));
+      btn.textContent = '✅ অর্ডার নিশ্চিত করুন';
+      btn.disabled = false;
+    }
+  } catch (err) {
+    alert('সার্ভার এরর, অনুগ্রহ করে আবার চেষ্টা করুন।');
+    btn.textContent = '✅ অর্ডার নিশ্চিত করুন';
+    btn.disabled = false;
+  }
+}
+
+function escapeHtml(str) {
+  if (!str) return '';
+  return str.replace(/'/g, "\'").replace(/"/g, '&quot;');
+}
+</script>
 </body>
-</html>
-"""
+</html>"""
 
 
 # ==============================================================================
@@ -1207,12 +2016,207 @@ def enrich_book_results(data, query):
 # ==============================================================================
 # ROUTES
 # ==============================================================================
+# ==============================================================================
+# WAFILIFE STORE SHELVES & TOP 3 COMPARE API
+# ==============================================================================
+STORE_SHELVES_CACHE = None
+
+def get_store_shelves():
+    global STORE_SHELVES_CACHE
+    if STORE_SHELVES_CACHE is not None:
+        return STORE_SHELVES_CACHE
+
+    from salesman.catalog_fts import DB_PATH, normalize_bangla_phonetic
+    import sqlite3
+
+    shelves_config = [
+        {
+            "id": "bestsellers",
+            "title": "🔥 সর্বাধিক বিক্রিত ও জনপ্রিয় বই (Top Bestsellers)",
+            "subtitle": "পাঠকদের সর্বাধিক পঠিত ও আলোচিত শীর্ষ বইসমূহ — সর্বনিম্ন দামে অর্ডার করুন",
+            "titles": [
+                "শঙ্খনীল কারাগার", "প্যারাডক্সিক্যাল সাজিদ", "বেলা ফুরাবার আগে", "দেবী",
+                "রিচার্জ আপনার ঈমান", "নন্দিত নরকে"
+            ]
+        },
+        {
+            "id": "discount",
+            "title": "🏷️ আকর্ষণীয় অফার ও সর্বোচ্চ ছাড়ের বই (Mega Discount Deals)",
+            "subtitle": "২৫% থেকে ৪৫% পর্যন্ত স্পেশাল ডিসকাউন্টে শীর্ষ বইসমূহ",
+            "titles": [
+                "হতাশা কাটানোর উপায়", "সি দিয়ে কম্পিউটার প্রোগ্রামিং", "হাবলুদের জন্য প্রোগ্রামিং",
+                "প্রশান্তি", "জীবনের সাথে লড়াই"
+            ]
+        },
+        {
+            "id": "islamic",
+            "title": "🕌 সমাদৃত ইসলামিক বই ও তাফসির (Islamic Literature)",
+            "subtitle": "দ্বীনি জ্ঞান, আত্মশুদ্ধি ও অনুপ্রেরণামূলক সেরা ইসলামিক বই",
+            "titles": [
+                "প্যারাডক্সিক্যাল সাজিদ", "বেলা ফুরাবার আগে", "সীরাতুন নবী",
+                "আর রাহীকুল মাখতূম", "রিচার্জ আপনার ঈমান"
+            ]
+        },
+        {
+            "id": "novels",
+            "title": "📚 কালজয়ী কথাসাহিত্য ও উপন্যাস (Classic Literature)",
+            "subtitle": "বাংলা সাহিত্যের কালজয়ী ও জনপ্রিয় উপন্যাস সংগ্রহ",
+            "titles": [
+                "শঙ্খনীল কারাগার", "নন্দিত নরকে", "দেবী", "কালবেলা", "শেষের কবিতা"
+            ]
+        },
+        {
+            "id": "career",
+            "title": "💡 ক্যারিয়ার, স্কিল ও সেলফ ডেভেলপমেন্ট (Career & Personal Growth)",
+            "subtitle": "প্রোগ্রামিং, আত্মউন্নয়ন ও ক্যারিয়ার গঠনের সেরা গাইডবুক",
+            "titles": [
+                "হাবলুদের জন্য প্রোগ্রামিং", "সি দিয়ে কম্পিউটার প্রোগ্রামিং", "পারমাণবিক অভ্যাস",
+                "রিচ ড্যাড পুওর ড্যাড", "ডিপ ওয়ার্ক"
+            ]
+        }
+    ]
+
+    conn = sqlite3.connect(DB_PATH)
+    cur = conn.cursor()
+    built_shelves = []
+
+    for s in shelves_config:
+        shelf_books = []
+        for t in s["titles"]:
+            norm = normalize_bangla_phonetic(t)
+            cur.execute("""
+                SELECT book_name, author_name, publisher_name, subject_name, min(price), max(regular_price), url
+                FROM master_store_catalog
+                WHERE norm_name = ? AND price > 0
+                GROUP BY book_name
+            """, (norm,))
+            row = cur.fetchone()
+            if row:
+                p = row[4]
+                rp = row[5] or int(p * 1.25)
+                if rp > p * 2.5:
+                    rp = int(p * 1.35)
+                disc = int(((rp - p) / rp) * 100) if rp > p else 20
+                shelf_books.append({
+                    "title": row[0],
+                    "author": row[1] or "জনপ্রিয় লেখক",
+                    "publisher": row[2] or "সেরা প্রকাশনী",
+                    "subject": row[3] or "সাহিত্য",
+                    "price": p,
+                    "regular_price": rp,
+                    "discount_pct": disc,
+                    "url": row[6] or "",
+                    "in_stock": True
+                })
+        built_shelves.append({
+            "id": s["id"],
+            "title": s["title"],
+            "subtitle": s["subtitle"],
+            "books": shelf_books
+        })
+
+    conn.close()
+    STORE_SHELVES_CACHE = built_shelves
+    return built_shelves
+
+
+@app.route("/api/book/compare")
+def api_book_compare():
+    title = request.args.get("title", "").strip()
+    if not title:
+        return jsonify({"error": "Missing title"}), 400
+
+    try:
+        from salesman.banglish_transliterator import is_banglish, transliterate_banglish
+        if is_banglish(title):
+            title = transliterate_banglish(title)
+    except Exception:
+        pass
+
+    from salesman.catalog_fts import normalize_bangla_phonetic, DB_PATH
+    import sqlite3
+
+    norm = normalize_bangla_phonetic(title)
+    conn = sqlite3.connect(DB_PATH)
+    cur = conn.cursor()
+
+    cur.execute("""
+        SELECT DISTINCT book_name, author_name, publisher_name, subject_name
+        FROM master_store_catalog
+        WHERE norm_name = ?
+        LIMIT 1
+    """, (norm,))
+    meta_row = cur.fetchone()
+    if not meta_row:
+        cur.execute("""
+            SELECT DISTINCT book_name, author_name, publisher_name, subject_name
+            FROM master_store_catalog
+            WHERE norm_name LIKE ?
+            ORDER BY length(norm_name) ASC
+            LIMIT 1
+        """, (f"%{norm}%",))
+        meta_row = cur.fetchone()
+
+    can_title = meta_row[0] if meta_row else title
+    author = meta_row[1] if meta_row and meta_row[1] else "অজ্ঞাত লেখক"
+    publisher = meta_row[2] if meta_row and meta_row[2] else "অন্যান্য প্রকাশনী"
+    subject = meta_row[3] if meta_row and meta_row[3] else "সাধারণ বই"
+
+    norm_can = normalize_bangla_phonetic(can_title)
+    cur.execute("""
+        SELECT store, price, regular_price, url
+        FROM master_store_catalog
+        WHERE norm_name = ? AND price > 0
+        ORDER BY price ASC
+    """, (norm_can,))
+    deal_rows = cur.fetchall()
+    conn.close()
+
+    deals = []
+    seen = set()
+    for d in deal_rows:
+        if d[0] not in seen:
+            seen.add(d[0])
+            st = d[0]
+            price = d[1]
+            reg = d[2] or int(price * 1.25)
+            if reg > price * 2.5:
+                reg = int(price * 1.35)
+            savings = max(0, reg - price)
+            deals.append({
+                "store": st,
+                "store_type": "Islamic" if any(k in st.lower() for k in ["wafi", "ruhama", "ashraf", "kitab", "aladaboi", "bdbooks", "boibitan"]) else "General",
+                "price": price,
+                "regular_price": reg,
+                "savings": savings,
+                "url": d[3],
+                "in_stock": True,
+                "stock_text": "স্টকে আছে"
+            })
+
+    top_3 = deals[:3]
+    for i, d in enumerate(top_3, start=1):
+        d["rank"] = i
+        d["badge"] = "🥇 ১ম সর্বনিম্ন দাম!" if i == 1 else ("🥈 ২য় সর্বনিম্ন" if i == 2 else "🥉 ৩য় সর্বনিম্ন")
+
+    return jsonify({
+        "title": can_title,
+        "author": author,
+        "publisher": publisher,
+        "subject": subject,
+        "top_3": top_3,
+        "all_stores": deals,
+        "total_stores": len(deals)
+    })
+
+
 @app.route("/")
 def home():
     query = request.args.get("q", "").strip()
     category = request.args.get("category", "all")
 
     if not query:
+        shelves = get_store_shelves()
         return render_template_string(
             HTML_TEMPLATE,
             query="",
@@ -1220,7 +2224,8 @@ def home():
             top_5=[],
             top_3=[],
             all_results=[],
-            total_found=0
+            total_found=0,
+            shelves=shelves
         )
 
     # Banglish Transliteration (e.g. 'shonkhonil karagar' -> 'শঙ্খনীল কারাগার')
