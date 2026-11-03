@@ -1145,6 +1145,24 @@ def compare_books(query, category="all", target_store=None, min_similarity=0.60)
     if not query:
         return {"query": "", "top_3": [], "all_results": [], "total_found": 0, "stores_searched": 0}
 
+    # 0. Banglish Transliteration (e.g. 'shonkhonil karagar' -> 'শঙ্খনীল কারাগার')
+    try:
+        from salesman.banglish_transliterator import is_banglish, transliterate_banglish
+        if is_banglish(query):
+            query = transliterate_banglish(query)
+    except Exception:
+        pass
+
+    # 1. Instant Offline Master Catalog lookup for Rokomari & Wafilife (from master CSVs)
+    raw_items = []
+    try:
+        from salesman.init_master_stores import get_offline_master_deals
+        cat_deals = get_offline_master_deals(query)
+        if cat_deals:
+            raw_items.extend(cat_deals)
+    except Exception:
+        pass
+
     scrapers = STORE_REGISTRY
     if target_store:
         target_norm = target_store.lower().replace(" ", "")
@@ -1155,7 +1173,6 @@ def compare_books(query, category="all", target_store=None, min_similarity=0.60)
     elif category == "general":
         scrapers = [s for s in STORE_REGISTRY if s[1] == "General"]
 
-    raw_items = []
     errors = {}
 
     with ThreadPoolExecutor(max_workers=min(len(scrapers), 24)) as pool:
@@ -1259,6 +1276,13 @@ def compare_books(query, category="all", target_store=None, min_similarity=0.60)
             it_copy['badge'] = f"{badges[len(top_5)]} (স্টক শেষ)"
             top_5.append(it_copy)
 
+    # Track top affordable bookstores for B2B intelligence
+    try:
+        from salesman.analytics_tracker import track_top_stores
+        track_top_stores(query, top_5)
+    except Exception:
+        pass
+
     return {
         "query": query,
         "category": category,
@@ -1275,12 +1299,21 @@ def stream_compare_books(query, category="all", target_store=None, min_similarit
     """
     Progressive real-time generator: yields results via Server-Sent Events (SSE)
     as each individual bookstore scraper finishes.
-    Rokomari and Wafilife arrive in 1-2s, with other stores streaming in successively.
+    Emits instant Rokomari and Wafilife catalog pricing immediately (0ms),
+    then streams live scraping results as each bookstore responds.
     """
     query = query.strip()
     if not query:
         yield {"event": "complete", "data": {"query": "", "top_5": [], "all_results": [], "total_found": 0, "stores_searched": 0}}
         return
+
+    # 0. Banglish Transliteration
+    try:
+        from salesman.banglish_transliterator import is_banglish, transliterate_banglish
+        if is_banglish(query):
+            query = transliterate_banglish(query)
+    except Exception:
+        pass
 
     scrapers = STORE_REGISTRY
     if target_store:
@@ -1297,6 +1330,28 @@ def stream_compare_books(query, category="all", target_store=None, min_similarit
     completed_count = 0
     best_cover_image = ""
     best_author = ""
+
+    # 1. Yield Instant Rokomari & Wafilife Catalog Pricing (from master CSVs)
+    try:
+        from salesman.init_master_stores import get_offline_master_deals
+        cat_deals = get_offline_master_deals(query)
+        for cd in cat_deals:
+            all_matched.append(cd)
+            yield {
+                "event": "store_result",
+                "data": {
+                    "store": cd["store"],
+                    "type": cd["store_type"],
+                    "items": [cd],
+                    "has_match": True,
+                    "completed": 0,
+                    "total": total_stores,
+                    "is_fast_tier": True,
+                    "is_catalog_fast": True
+                }
+            }
+    except Exception:
+        pass
 
     with ThreadPoolExecutor(max_workers=min(total_stores, 24)) as pool:
         future_map = {pool.submit(fn, query): (name, stype) for name, stype, fn in scrapers}
@@ -1389,6 +1444,12 @@ def stream_compare_books(query, category="all", target_store=None, min_similarit
             it_copy['rank'] = len(top_5) + 1
             it_copy['badge'] = f"{badges[len(top_5)]} (স্টক শেষ)"
             top_5.append(it_copy)
+
+    try:
+        from salesman.analytics_tracker import track_top_stores
+        track_top_stores(query, top_5)
+    except Exception:
+        pass
 
     yield {
         "event": "complete",

@@ -1223,6 +1223,14 @@ def home():
             total_found=0
         )
 
+    # Banglish Transliteration (e.g. 'shonkhonil karagar' -> 'শঙ্খনীল কারাগার')
+    try:
+        from salesman.banglish_transliterator import is_banglish, transliterate_banglish
+        if is_banglish(query):
+            query = transliterate_banglish(query)
+    except Exception:
+        pass
+
     cache_key = f"{query.lower()}:{category}"
     cached_data = get_cached(cache_key)
 
@@ -1252,6 +1260,13 @@ def api_compare():
     category = request.args.get("category", "all")
     if not query:
         return jsonify({"error": "Missing query parameter 'q'"}), 400
+
+    try:
+        from salesman.banglish_transliterator import is_banglish, transliterate_banglish
+        if is_banglish(query):
+            query = transliterate_banglish(query)
+    except Exception:
+        pass
 
     cache_key = f"{query.lower()}:{category}"
     cached_data = get_cached(cache_key)
@@ -1891,6 +1906,7 @@ ADMIN_DASHBOARD_HTML = """<!DOCTYPE html>
 
   <div class="tabs">
     <button class="tab-btn active" onclick="switchTab('tabLost')">🚨 হারানো বিক্রির সুযোগ (Lost Sales)</button>
+    <button class="tab-btn" onclick="switchTab('tabAffordable')">🏆 শীর্ষ ৫টি কম দামের বুকশপ</button>
     <button class="tab-btn" onclick="switchTab('tabOrders')">🛒 ক্যাশ অন ডেলিভারি অর্ডার (COD Orders)</button>
     <button class="tab-btn" onclick="switchTab('tabDemanded')">📈 সর্বাধিক জনপ্রিয় বই</button>
     <button class="tab-btn" onclick="switchTab('tabStreaming')">⚡ ২১টি শপের লাইভ স্ট্রিমিং টেস্ট (SSE)</button>
@@ -1914,6 +1930,32 @@ ADMIN_DASHBOARD_HTML = """<!DOCTYPE html>
         </thead>
         <tbody id="lostSalesBody">
           <tr><td colspan="4" style="text-align:center; color:var(--muted);">লোড হচ্ছে...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Tab 1b: Top Affordable Bookstores Leaderboard -->
+  <div id="tabAffordable" class="tab-content">
+    <div class="table-card">
+      <div style="padding:16px; border-bottom:1px solid var(--border); background:#f0fdf4;">
+        <h3 style="color:#166534; font-size:16px;">🏆 সবচেয়ে কম দাম দেওয়া শীর্ষ ৫টি বুকশপ (Market Price Intelligence)</h3>
+        <p style="font-size:13px; color:#14532d; margin-top:2px;">আমাদের লাইভ স্ক্র্যাপিং অ্যালগরিদম ট্র্যাক করছে কোন ৫টি বুকশপ নিয়মিত সবচেয়ে কম দামে বই বিক্রি করে। এদের ডেটা দ্রুত প্রদর্শনের জন্য আলাদাভাবে অপটিমাইজ করা হচ্ছে!</p>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th># রেঙ্ক</th>
+            <th>বুকশপের নাম</th>
+            <th>১ম সর্বনিম্ন হওয়ার রেকর্ড</th>
+            <th>শীর্ষ ৩-এ থাকার হার</th>
+            <th>গড় রেঙ্ক</th>
+            <th>গড় বিক্রয়মূল্য</th>
+            <th>প্রি-ক্যাশ স্ট্যাটাস</th>
+          </tr>
+        </thead>
+        <tbody id="affordableStoresBody">
+          <tr><td colspan="7" style="text-align:center; color:var(--muted);">লোড হচ্ছে...</td></tr>
         </tbody>
       </table>
     </div>
@@ -2024,6 +2066,25 @@ async function loadDashboard() {
       `).join('');
     } else {
       demTbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:var(--muted); padding:20px;">কোনো ডেটা নেই</td></tr>';
+    }
+
+    // Top Affordable Stores Leaderboard Table
+    const affTbody = document.getElementById('affordableStoresBody');
+    if (data.top_affordable_stores && data.top_affordable_stores.length > 0) {
+      const medals = ['🥇 ১ম', '🥈 ২য়', '🥉 ৩য়', '🎖️ ৪র্থ', '⭐ ৫ম'];
+      affTbody.innerHTML = data.top_affordable_stores.map((st, idx) => `
+        <tr>
+          <td><strong style="color:var(--primary);">${medals[idx] || '#' + (idx + 1)}</strong></td>
+          <td><strong>${st.store_name}</strong></td>
+          <td><span class="badge badge-success">${st.rank_1_wins} বার</span></td>
+          <td><span class="badge badge-warning">${st.top_3_count} বার</span></td>
+          <td>${st.avg_rank}</td>
+          <td><strong style="color:#047857;">৳${st.avg_price}</strong></td>
+          <td><span class="badge badge-success">✅ প্রি-ক্যাশ ও ফাস্ট-টায়ার</span></td>
+        </tr>
+      `).join('');
+    } else {
+      affTbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:var(--muted); padding:20px;">ডেটা লোড হচ্ছে...</td></tr>';
     }
 
     // Orders Table

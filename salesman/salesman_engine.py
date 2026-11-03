@@ -815,6 +815,14 @@ class SalesmanAgent:
                 }
             }
 
+        # 0. Banglish Transliteration (e.g. 'hotasha katanor boi' -> 'হতাশা কাটানোর বই')
+        try:
+            from salesman.banglish_transliterator import is_banglish, transliterate_banglish
+            if is_banglish(user_message):
+                user_message = transliterate_banglish(user_message)
+        except Exception:
+            pass
+
         # 1. Intent extraction
         intent = self._extract_intent_heuristics(user_message)
         topic_data = intent.get("topic_data")
